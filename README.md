@@ -43,3 +43,44 @@ If you are unfamiliar with the `git` tool, check GitHub [help pages](https://hel
 This opens local Pluto server in your browser. Now you can choose the notebook and run it
 (the notebboks are located in the directory `EuroCC-Course-Signal-and-Data-Procesing-in-Julia.jl/Lectures/`).
 
+## Contents
+
+The lectures are intended for students, scientists, and programmers working in data analysis and artificial intelligence. 
+The lectures describe three algorithms used in signal processing and data analysis. 
+The algorithms use methods of linear algebra to solve the following problems:
+
+### Signal Decomposition
+
+_Input:_ Suppose we are given a data signal that consists of several nearly mono-components (almost periodic signal where amplitude, frequency, and phase slightly change in time).
+
+_Question:_ Can we recover the mono-components?
+
+_Answer:_ YES, with an efficient algorithm using fast eigenvalue decomposition of Hankel matrices!
+
+_Applications:_ Mono-component recovery can be successfully used to analyse audio signals.
+
+
+### Sparse + Low-rank Splitting
+
+_Input:_ Suppose we are given a data matrix, and know that it has a form A=L+S, where L is a matrix of low rank and S is a sparse matrix 
+(but we know neither the rank nor the location of the non-zero entries).
+
+_Question:_ Can we recover L and S?
+
+_Answer:_ YES, with high probability using an efficient algorithm based on singular value decomposition and iterative thresholding!
+
+_Applications:_ Detecting moving objects in video surveillance, latent semantic indexing, collaborative filtering.
+
+
+### Compressive Sensing
+
+_Input:_ Several samples of a sparse signal. The number of samples is (far) smaller than the desired signal resolution. 
+
+_Question:_ Can we recover the sparse signal from a few measurements?
+
+_Answer:_ YES, for some signals and carefully selected measurements using l1 minimization (linear programming)!
+
+_Applications:_ Images. 
+ 
+
+
