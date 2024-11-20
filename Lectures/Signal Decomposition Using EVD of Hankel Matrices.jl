@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.41
+# v0.19.46
 
 using Markdown
 using InteractiveUtils
@@ -15,7 +15,10 @@ macro bind(def, element)
 end
 
 # ╔═╡ b4423c48-1d43-4887-9f96-a2f6ac8eaa45
-using Plots, FFTW, ToeplitzMatrices, SpecialMatrices, PlutoUI, Random, LinearAlgebra, WAV, Arpack, LinearMaps
+using PlutoUI, FFTW, ToeplitzMatrices, SpecialMatrices, Random, LinearAlgebra, WAV, Arpack, LinearMaps, Plots
+
+# ╔═╡ b6058fe0-72a9-4be3-9d09-5f35109198a2
+plotly()
 
 # ╔═╡ 5b8f2611-cdf9-4761-8768-4b014f02b842
 PlutoUI.TableOfContents(aside=true)
@@ -35,8 +38,9 @@ Mono-component recovery can be successfully applied to audio signals.
 
 __Prerequisites__
 
-The reader should be familiar to elementary concepts about signals, and with linear algebra concepts, particularly EVD and its properties and algorithms.
- 
+The reader should be familiar with elementary concepts about signals and linear algebra concepts, particularly eigenvalue decomposition and its properties and algorithms. The latter can be learned from any textbook on linear algebra or from this [notebook](https://ivanslapnicar.github.io/GIAN-Applied-NLA-Course/L3a%20Eigenvalue%20Decomposition%20-%20Definitions%20and%20Facts.html).
+
+
 __Competences__
 
 The reader should be able to decompose given signal into mono-components using EVD methods.
@@ -44,8 +48,6 @@ The reader should be able to decompose given signal into mono-components using E
 __References__
 
 For more details see [P. Jain and R. B. Pachori, An iterative approach for decomposition of multi-component non-stationary signals based on eigenvalue decomposition of the Hankel matrix](http://www.sciencedirect.com/science/article/pii/S0016003215002288).
-
-__Credits__: The first Julia implementation was derived in [A. M. Bačak, Master's Thesis]().
 """
 
 # ╔═╡ d1b6461e-6e87-4cab-af2d-f28e09c336ac
@@ -70,6 +72,8 @@ Here:
 
  $f_k=\displaystyle\frac{F_k}{F}$ is the __normalized frequency__ of $x^{(k)}$,
 
+ $p_k=\displaystyle\frac{1}{f_k}$ is the period of $x^{(k)}$,
+
  $F$ is the __sampling frequency__ of $x$ in Hz, 
 
  $F_k$ is the sampling frequency of $x^{(k)}$,
@@ -81,7 +85,17 @@ Here:
 We assume that $F_k< F_{k+1}$ for $k=1,2,\ldots,n-1$, and $F>2F_n$.
 
 A __Hankel matrix__ is a (real) square matrix with constant values along the skew-diagonals. More precisely, let $a\in\mathbb{R}^{2n-1}$. An $n\times n$ matrix $H\equiv H(a)$ for which $H_{ij}=H_{i+1,j-1}=a_{i+j-1}$ is a Hankel matrix.
+"""
 
+# ╔═╡ 545776f8-e826-430b-8744-05a53ef708b6
+begin
+	# Small Hankel matrix
+	a=collect(1:9)
+	Hankel(a)
+end
+
+# ╔═╡ a8bff246-a387-43ec-91b9-de97d366c79d
+md"""
 ## Facts
 
 Let $x$ be a signal with $2n-1$ samples composed of $L$ stationary mono-components.
@@ -100,13 +114,6 @@ md"""
 ## Example - Signal with three mono-components
 """
 
-# ╔═╡ 545776f8-e826-430b-8744-05a53ef708b6
-begin
-	# Small Hankel matrix
-	a=collect(1:11)
-	Hankel(a)
-end
-
 # ╔═╡ 2206c20c-9e67-49a4-bc26-b203477b872f
 begin
 	# Create the signal
@@ -116,6 +123,8 @@ begin
 	L = 3
 	A = [3, 2, 1]
 	Fk= [200, 320, 160]
+	# Normalized frequencies
+	fk=Fk./F
 	θ = [pi/2, pi/4, 0]
 	x = zeros(N)
 	for k=1:3
@@ -123,7 +132,7 @@ begin
 	        x[i]+=A[k]*cos(2*pi*Fk[k]*i/F+θ[k])
 	    end
 	end
-	x
+	x, fk
 end
 
 # ╔═╡ a781a4c1-d0b1-4bab-a08b-724697d617f9
@@ -136,8 +145,8 @@ F./Fk
 
 # ╔═╡ e6ad6e6e-b0ba-42d4-8677-f1149aed08bc
 # FFT indicates that there are three components with (approximate) 
-# angular frequencies 160,200, and 320
-plot(range(-F/2,stop=F/2,length=length(x)),abs.(fftshift(fft(x))), title="FFT of a signal", legend=false, xlabel="Angular frequency")
+# sampling frequencies 160,200, and 320
+scatter(range(-F/2,stop=F/2,length=length(x)),abs.(fftshift(fft(x))), title="FFT of a signal", legend=false, xlabel="Angular frequency",xlims=(-500,500))
 
 # ╔═╡ e0054a3b-2e14-4bb8-81b0-6763e963dfaa
 # Decompose the signal 
@@ -164,42 +173,40 @@ end
 
 # ╔═╡ 2369b267-cfbc-4092-9822-24582c10af13
 begin
-	# Compare the first matrix with the Hankel matrix of the first mono-component
+	# For comparison, create the first mono-component and its Hankel matrix
 	x₁ = zeros(N)
 	c=1
 	for i=1:N
 	    x₁[i]+=A[c]*cos(2*pi*Fk[c]*i/F+θ[c])
 	end
-end
-
-# ╔═╡ 4a35f8fa-33d8-481f-8423-d5af7e32dc8f
-begin
 	H₁=Hankel(x₁)
-	eigvals(Matrix(H₁)), norm(Hcomp[1]-H₁)
 end
 
 # ╔═╡ 16f56d88-d9e4-4ad5-9431-3a993408d26d
+# Compare
 Hcomp[1]
+
+# ╔═╡ 4a35f8fa-33d8-481f-8423-d5af7e32dc8f
+# Check norm
+norm(Hcomp[1]-H₁)
 
 # ╔═╡ 2d0f04ca-fb8d-4dc9-81e6-1f2600fb0fab
 begin
-	# Now we reconstruct the mono-components from the skew-diagonal elements of Hcomp
-	xcomp=Array{Array{Float64}}(undef,L)
-	z=Array{Float64}(undef,N)
+	# Reconstruct the mono-component xcomp[k] using the border elements of Hcomp[k]
+	# (first column and last row)
+	xcomp=Array{Vector{Float64}}(undef,L)
 	for k=1:L
-	    z[1:2:N]=diag(Hcomp[k])
-	    z[2:2:N]=diag(Hcomp[k],1)
-	    xcomp[k]=copy(z)
+		xcomp[k]=[Hcomp[k][:,1];Hcomp[k][end,2:end]]
 	end
 end
 
 # ╔═╡ 79db0e46-1685-4c90-b51c-b158eac11f03
 # xaxis=collect(1:N)
-plot([xcomp[1],xcomp[2],xcomp[3]],title="Extracted mono-components", label=["First" "Second" "Third"],xlabel="Sample")
+plot([xcomp[1],xcomp[2],xcomp[3]],title="Extracted mono-components", label=["First" "Second" "Third"], xlabel="Sample")
 
 # ╔═╡ 97b56eb0-df22-4877-8320-6440a1806c10
 md"""
-# Fast EVD of Hankel matrices
+# Fast Hankel × Vector using FFT
 
 Several outer eigenvalues pairs of Hankel matrices can be computed using Lanczos method. If the multiplication $Hx$ is performed using Fast Fourier Transform, this EVD computation is very fast.
 
@@ -211,21 +218,6 @@ $$
 a=(a_{-(n-1)},a_{-(n-2)},\ldots,a_{-1},a_0,a_1,\ldots,a_{n-1})\in\mathbb{R}^{2n-1}.$$ 
 
 An $n\times n$ matrix $T\equiv T(a)$ for which $T_{ij}=T_{i+1,j+1}=a_{i-j}$ is a Toeplitz matrix.
-
-A __circulant matrix__ is a Toeplitz matrix where each column is rotated one element downwards relative to preceeding column. 
-
-More precisely, let $a\in\mathbb{R}^{n}$. An $n\times n$ matrix $C\equiv C(a)=T(a,a_{1:n-1})$ is a Circulant matrix.
-
-A __rotation matrix__ is an identity matrix rotated 90 degrees to the right (or left).
-
-A __Fourier matrix__ is Vandermonde matrix:
-
-$$
-F_n=V(1,\omega_n,\omega_n^2,\ldots, \omega_n^{n-1}),$$
-
-where 
-$\omega_n=exp(2\pi i/n)$ is the $n$-th root of unity (see the notebook 
-[Eigenvalue Decomposition - Definitions and Facts](../Module+B+-+Eigenvalue+and+Singular+Value+Decompositions/L3a+Eigenvalue+Decomposition+-+Definitions+and+Facts.ipynb)).
 """
 
 # ╔═╡ fd85e7bd-b950-4f0b-909c-cbdc85216a61
@@ -234,69 +226,30 @@ Notice different meanings of vector $a$: in `C=Circulant(a)`, $a$ is the first c
 `T=Toeplitz(a,b)`, $a_i$ are the elements in the first column and $b_i$ are the elements in the first row, and in `H=Hankel(a)`, $a_i$ is the element of the $i$-th skew-diagonal starting from $H_{11}$.
 """
 
-# ╔═╡ a2570d4b-101c-4120-aa6c-8bbf8e42decd
-# C
-Circulant([1,2,3,4,5])
-
-# ╔═╡ 31498e3b-94eb-4fe6-a814-f69fc9e5bb4c
-# TC
-Toeplitz([1,2,3,4,5],[1,5,4,3,2])
-
 # ╔═╡ 26beaaa8-923b-4b03-ae6d-af18996eb398
 # T
 Toeplitz([5,6,7,8,9],[5,4,3,2,1])
 
-# ╔═╡ 55c51a2a-d99b-4e39-b2d5-4d82d8742a78
-# H₁
-Hankel([1,2,3,4,5,6,7,8,9])
-
-# ╔═╡ faf54ef7-7f3b-4f16-a18f-b21c0f00c2c9
-Vandermonde([6,2,3,4,5])
-
-# ╔═╡ f17cf45a-738e-4d23-8bfb-c06990ebd1fe
+# ╔═╡ afd8681e-3169-44f1-aece-599ca9998531
 md"""
-## Facts 
+A __circulant matrix__ is a Toeplitz matrix where each column is rotated one element downwards relative to the preceding column. 
 
-For more details see [G. H. Golub and C. F. Van Loan, Matrix Computations, p. 202] (http://web.mit.edu/ehliu/Public/sclark/Golub%20G.H.,%20Van%20Loan%20C.F.-%20Matrix%20Computations.pdf), and the references therein
-
-1. Hankel matrix is the product of a Toeplitz matrix and the rotation matrix.
-
-2. Circulant matrix is normal and, thus, unitarily diagonalizable, with the eigenvalue decomposition
-
-$$
-C(a)=U\mathop{\mathrm{diag}}(F_n^* a)U^*,$$
-
-where $U=\displaystyle\frac{1}{\sqrt{n}} F_n$. The product $F_n^* a$ can be computed by the _Fast Fourier Transform_(FFT).
-
-3. Given $a,x\in\mathbb{R}^n$, the product $y=C(a)x$ can be computed using FFT as follows:
-
-$$\begin{aligned}
-\tilde x&=F_n^*x\\
-\tilde a&=F_n^*a\\
-\tilde y&=\tilde x.* \tilde a\\
-y&= F_n^{-*} \tilde y.
-\end{aligned}$$
-
-4. Toeplitz matrix of order $n$ can be embedded in a circulant matrix of order $2n-1$: if $a\in\mathbb{R}^{2n-1}$, then 
-
-$$
-T(a)=[C([a_{n+1:2n-1};a_{1:n}])]_{1:n,1:n}.$$
-
-5. Further, let $x\in\mathbb{R}^{n}$ and let $\bar x\in\mathbb{R}^{2n-1}$ be equal to $x$ padded with $n-1$ zeros.Then
-
-$$
-T(a)x=[C([a_{n+1:2n-1};a_{1:n}])\bar x]_{1:n}.$$
-
-6. Fact 1 implies $H(a)x=(T(a)J)x=T(a)(Jx)$.
-
+More precisely, let $a\in\mathbb{R}^{n}$. An $n\times n$ matrix $C\equiv C(a)=T(a,a_{1:n-1})$ is a Circulant matrix.
 """
 
-# ╔═╡ 9782d6f9-285c-46d8-a826-017f4a5bcf53
-md"
-## Examples
+# ╔═╡ a2570d4b-101c-4120-aa6c-8bbf8e42decd
+Circulant([1,2,3,4,5])
 
-### Facts 1 and 2
-"
+# ╔═╡ 31498e3b-94eb-4fe6-a814-f69fc9e5bb4c
+# Notice the different indexing
+Toeplitz([1,2,3,4,5],[1,5,4,3,2])
+
+# ╔═╡ c07030fd-47e4-4ee7-b409-8591771f61c7
+md"""
+A __rotation matrix__ is an identity matrix rotated 90 degrees to the right (or left).
+
+Hankel matrix is the product of a Toeplitz matrix and the rotation matrix.
+"""
 
 # ╔═╡ 86985c1c-c4a2-4b38-88e5-d1488d903ea8
 begin
@@ -309,24 +262,76 @@ Matrix(Toeplitz([5,6,7,8,9],[5,4,3,2,1]))*J, Hankel([1,2,3,4,5,6,7,8,9])
 # ╔═╡ 9dbdb70b-758d-49e7-b0b1-74fb339a9a8d
 rotl90(Matrix(Toeplitz([5,6,7,8,9],[5,4,3,2,1])))
 
-# ╔═╡ b9c3585a-e4cb-45a0-a864-a1739f4a47ed
-begin
-	# Fact 2
-	Random.seed!(467)
-	n₀=6
-	a₀=rand(-8:8,n₀)
-	a₀,fft(a₀)
-end
+# ╔═╡ 23c239f3-4cd2-48fc-9391-41d361460f98
+md"""
+
+Given vector $x$ of length $n$, a __Vandermonde matrix__ is a $n\times n$ matrix:
+
+$$
+V(x)=\begin{bmatrix} x.^0 & x.^1 & x.^2 & \cdots & x.^n\end{bmatrix}.$$
+
+A __Fourier matrix__ is the Vandermonde matrix:
+
+$$
+F_n=V(1,\omega_n,\omega_n^2,\ldots, \omega_n^{n-1}),$$
+
+where $\omega_n=\exp(2\pi i/n)$ is the $n$-th root of unity.
+"""
+
+# ╔═╡ faf54ef7-7f3b-4f16-a18f-b21c0f00c2c9
+Vandermonde([6,2,3,4,5])
+
+# ╔═╡ f17cf45a-738e-4d23-8bfb-c06990ebd1fe
+md"""
+## Facts 
+
+For more details see [G. H. Golub and C. F. Van Loan, Matrix Computations] (https://epubs.siam.org/doi/book/10.1137/1.9781421407944), and the references therein
+
+1. Circulant matrix is normal and, thus, unitarily diagonalizable, with the eigenvalue decomposition
+$$
+C(a)=U\mathop{\mathrm{diag}}(F_n^* a)U^*,$$
+where $U=\displaystyle\frac{1}{\sqrt{n}} F_n$. The product $F_n^* a$ can be computed by the Fast Fourier Transform (FFT).
+2. Given $a,x\in\mathbb{R}^n$, the product $y=C(a)x$ can be computed using FFT as follows:
+$$\begin{aligned}
+\tilde x&=F_n^*x\\
+\tilde a&=F_n^*a\\
+\tilde y&=\tilde x.* \tilde a\\
+y&= F_n^{-*} \tilde y.
+\end{aligned}$$
+3. Toeplitz matrix of order $n$ can be embedded in a circulant matrix of order $2n-1$: if $a\in\mathbb{R}^{2n-1}$, then 
+$$
+T(a)=[C([a_{n+1:2n-1};a_{1:n}])]_{1:n,1:n}.$$
+4. Further, let $x\in\mathbb{R}^{n}$ and let $\bar x\in\mathbb{R}^{2n-1}$ be equal to $x$ padded with $n-1$ zeros. Then
+$$
+\begin{bmatrix} T & A \\ B & C\end{bmatrix}
+\begin{bmatrix} x \\ 0 \end{bmatrix}$$
+or
+
+$$
+T(a)x=[C([a_{n+1:2n-1};a_{1:n}])\bar x]_{1:n}.$$
+5. Since Hankel = Toeplitz × Rotation, we have
+$$
+H(a)x=(T(a)J)x=T(a)(Jx).$$
+"""
+
+# ╔═╡ 9782d6f9-285c-46d8-a826-017f4a5bcf53
+md"
+## Examples
+"
 
 # ╔═╡ 94171cfa-1e8e-4aba-a5b8-faad0104cf80
-begin	
+begin
+	# Fact 1 - EVD of Circulant
+	Random.seed!(467)
+	n₀=5
+	a₀=rand(-8:8,n₀)
 	C₀=Circulant(a₀)
 	ω=exp(2*pi*im/n₀)
 	v=[ω^k for k=0:n₀-1]
 	F₀=Vandermonde(v)
-	U₀=F₀/sqrt(n₀)
+	U₀=F₀/√n₀
 	λ₀=Matrix(F₀)'*a₀
-	λ₀,eigvals(Matrix(C₀))
+	λ₀,eigvals(C₀)
 end
 
 # ╔═╡ 8a1efef7-8903-426c-b8d6-a99bc5288981
@@ -334,21 +339,14 @@ C₀
 
 # ╔═╡ 41b7458c-dc6c-4774-8991-f74519a850ed
 # Residual
-norm(Matrix(C₀)*U₀-U₀*Diagonal(λ₀))
-
-# ╔═╡ e7e58aaf-af48-4eac-a875-b64c569e435c
-#?fft
-
-# ╔═╡ 955fa4c1-50a8-4b61-be12-b4adb557ea82
-# Check fft
-norm(λ₀-fft(a₀))
+norm(C₀*U₀-U₀*Diagonal(λ₀))
 
 # ╔═╡ 8fbdea3e-2c49-4068-8b2e-6339737554f2
 md"""
 
-### Fast multiplication using FFT
+## Fast Circulant × Vector
 
-Fact 3 - Circulant() x vector, as implemented in the (oudated) package `SpecialMatrices.jl`, use `add SpecialMatrices#withToeplitz`.
+Fact 2 - Circulant() × vector, as implemented in the (oudated) package `SpecialMatrices.jl`, use `add SpecialMatrices#withToeplitz`.
 
 ```
 function *(C::Circulant{T},x::Vector{T}) where T
@@ -400,97 +398,85 @@ end
 ```
 """
 
-# ╔═╡ 3c96b257-8c18-4e7b-9677-c8a703d5d21f
-x₀=rand(-9.0:9,1000)
-
 # ╔═╡ 561faa84-f4e3-4712-92b0-68e6edabae65
-M=Circulant(x₀)
+begin
+	# Fact 2 - Fast Circulant × Vector
+	x₀=rand(-9.0:9,1000)
+	M=Circulant(x₀)
+	y₀=rand(-9.0:9,1000)
+end
 
 # ╔═╡ 0c6a11eb-e4b2-4daa-83c9-97872ca150ce
 @which mul!(similar(x₀),M,x₀,1,0)
 
 # ╔═╡ c8d73641-e8ba-46ff-b368-981d3c288d48
-@which M*x₀
+@which M*y₀
 
 # ╔═╡ b69942f4-34b8-47f9-b33a-9776719feac0
-y₀=mul!(similar(x₀),M,x₀,1,0)
+@time mul!(similar(y₀),M,y₀,1,0);
+
+# ╔═╡ 72f3a029-32f2-4dbd-b8c3-f5794ea85404
+# For comparison of timing
+@time Matrix(M)*y₀;
 
 # ╔═╡ 319a6376-3172-4f9b-9137-c8a3809920c3
-norm(y₀-M*x₀)
-
-# ╔═╡ 5be3c4c2-dcae-4a57-8bcc-9a6d1f580110
-[Matrix(M)*x₀ M*x₀ mul!(similar(x₀),M,x₀,1.0,0.0)]
+norm(M*y₀-Matrix(M)*y₀)
 
 # ╔═╡ 61d7911a-ea4d-4ef1-9778-6a2e8eff10e1
 begin
-	a₂=rand(-6:6,6)
-	b₂=[a₂[1];rand(-6:6,5)]
+	# Fact 3 - Embedding Toeplitz into Circulant
+	a₂=rand(-6:6,5)
+	b₂=[a₂[1];rand(-6:6,4)]
 	T=Toeplitz(a₂,b₂)
 end
 
 # ╔═╡ b2fc20f1-faf1-4e08-9ccd-6b175cff0066
 C=Circulant([a₂;reverse(b₂[2:end])])
 
-# ╔═╡ a598c1a7-9788-44bb-85ee-24aa4f14d9f9
-# C=Circulant([a₂[n₀:2*n₀-1];a₂[1:n₀-1]])
-
 # ╔═╡ d132b9c0-8101-4c14-89d7-5fa1462ea71e
-# Fact 5 - Toeplitz() x vector
+# Fact 4 - Fast Toeplitz() × vector
 x₂=rand(-6:6,n₀)
-
-# ╔═╡ 7e92160b-51eb-4434-8001-60a00f84d1f2
-x₂
-
-# ╔═╡ 70890a0e-f7bb-4a92-aa11-2e65e70875b1
-mul!(similar(x₂),T,x₂,1,0)
-
-# ╔═╡ f3fce6ec-b9c8-4aae-bdfa-2387bb2cc38a
-md"""
-$$
-\begin{bmatrix} T & A \\ B & C\end{bmatrix} 
-\begin{bmatrix} x \\ 0 \end{bmatrix}$$
-"""
 
 # ╔═╡ 32f20ec2-bf15-467f-98ef-6dbe6a568bca
 [Matrix(T)*x₂ T*x₂ mul!(similar(x₂),T,x₂,1,0)]
 
 # ╔═╡ 825e7090-8196-4165-853c-57237f5e05c9
 begin
-	# Fact 6 - Hankel() x vector
-	h₂=rand(-9:9,1999)
+	# Fact 6 - Fast Hankel() x vector
+	h₂=rand(-9:9,9)
 	H₂=Hankel(h₂)
 end
 
 # ╔═╡ 8f361246-8941-47a6-98c1-2b92dea2c74b
-[Matrix(H₂)*x₀ H₂*x₀ mul!(similar(x₀),H₂,x₀,1,0)]
+[Matrix(H₂)*x₂ H₂*x₂ mul!(similar(x₂),H₂,x₂,1,0)]
 
 # ╔═╡ 84d96895-e4ad-4bf4-8df7-6e81b983bb3e
 md"""
-### Fast EVD of a Hankel matrix
+# Fast EVD of a Hankel matrix
 
-Given a Hankel matrix $H$, the Lanczos method can be applied by defining a function (linear map) which returns the product $Hx$ for any vector $x$. This approach uses the package [LinearMaps.jl](https://github.com/Jutho/LinearMaps.jl) and is described in the notebook
-[Symmetric Eigenvalue Decomposition - Lanczos Method](../Module+B+-+Eigenvalue+and+Singular+Value+Decompositions/L4d+Symmetric+Eigenvalue+Decomposition+-+Lanczos+Method.ipynb) notebook. 
+Given a Hankel matrix $H$, the Lanczos method can be applied by defining a function (linear map) which returns the product $Hx$ for any vector $x$. This approach uses the package [LinearMaps.jl](https://github.com/Jutho/LinearMaps.jl) and is described in the this
+[notebook](https://ivanslapnicar.github.io/GIAN-Applied-NLA-Course/L4d%20Symmetric%20Eigenvalue%20Decomposition%20-%20Lanczos%20Method.html). 
 
-_The computation is very fast and allocates little extra space._
+__The computation is high-speed and allocates little extra space.__
 """
 
 # ╔═╡ cc41548c-674a-4f67-bdf7-95ce16a6a5d8
+# Define the function using the Hankel matrix H of the three-component signal
 f(x)=mul!(similar(x),H,x,1,0)
 
-# ╔═╡ 40e51d70-0e20-48c8-9156-b1475870a604
-H
-
 # ╔═╡ eb1daded-ad36-41d3-9088-a9f8cf6bf63f
+# Define the linear map using the function f
 A₁=LinearMap(f,size(H,1),issymmetric=true)
 
 # ╔═╡ eef3c2ad-3619-49b1-a612-63c234314dfd
 size(A₁)
 
 # ╔═╡ aac0a39f-0c49-4009-974e-852c7e8e2b17
+# This is the standard O(n^3) algorithm
 @time eigvals(Matrix(H));
 
 # ╔═╡ 38b8e9f0-2546-4113-83b7-85599faa6992
-# Run twice
+# This is the Lanczos algorithm using fast multiplication
 @time λA,UA=eigs(A₁, nev=6, which=:LM)
 
 # ╔═╡ 146871c4-e014-4ee4-9933-1d21c2504635
@@ -514,12 +500,15 @@ x^{(k)}_i=A_k \cos(2\pi f_k i +\theta_k),\quad i=1,2,\ldots,m.$$
 Assume that the normalized frequencies $f_k=\displaystyle\frac{F_k}{F}$, the sampling frequencies $F_k$, the amplitudes  $A_k$, and the phases $\theta_k$, all _sightly_ change in time.
 
 Let $H\equiv H(x)$ be the Hankel matrix of $x$. The eigenpair of $(\lambda,u)$ of $H$ is __significant__ if $|\lambda|> \tau  \cdot \sigma(H)$. Here $\sigma(H)$ is the spectral radius of $H$, and $\tau$ is the __significant threshold percentage__ chosen by the user depending on the type of the problem.
+"""
 
-
+# ╔═╡ e09da774-b32d-487f-97a9-2195d3306224
+md"""
 ## Fact
 
 The following algorithm decomposes the signal $x$:
-1. Choose $\tau$ and form the Hankel matrix $H$
+1. Choose the threshold $\tau$
+2. Form the Hankel matrix $H$
 2. Compute the EVD of $H$
 3. Choose the significant eigenpairs of $H$
 4. For each significant eigenpair $(\lambda,u)$
@@ -533,14 +522,14 @@ The following algorithm decomposes the signal $x$:
 
 # ╔═╡ e47f1bd9-89b5-4f67-96bf-d6b4a50a721c
 md"""
-## Example -  Note A
+## Note A⁴
 
 Each tone has its fundamental frequency (mono-component). However, musical instruments produce different overtones (harmonics) which are near integer multiples of the fundamental frequency.
 Due to construction of resonant boxes, these frequencies slightly vary in time, and their amplitudes are contained in a time varying envelope.
 
 Tones produces by musical instruments  are nice examples of non-stationary signals. We shall decompose the note A4 played on piano.
 
-For manipulation of recordings, we are using package [WAV.jl](https://github.com/dancasimiro/WAV.jl). Another package with similar functionality is the package [AudioIO.jl](https://github.com/ssfrr/AudioIO.jl).
+For manipulation of recordings, we are using package [WAV.jl](https://github.com/dancasimiro/WAV.jl). Another package with similar functionality is the package [LibSndFile.jl](https://github.com/JuliaAudio/LibSndFile.jl).
 """
 
 # ╔═╡ 309e82f8-2ea4-4de8-a27b-92844948c579
@@ -555,7 +544,9 @@ typeof(Signalₐ)
 
 # ╔═╡ 59afc24f-fdf0-4694-a723-426352299629
 begin
+	# Data
 	sₐ=Signalₐ[1]
+	# Sampling frequency
 	Fs=Signalₐ[2]
 end
 
@@ -565,13 +556,13 @@ wavplay(sₐ,Fs)
 
 # ╔═╡ e52f9b5c-12eb-4b9b-9d60-9b421d5b7fe2
 # Plot the signal
-plot(sₐ,title="Note a", legend=false, xlabel="sample")
+plot(sₐ,title="Note A⁴", legend=false, xlabel="sample")
 
 # ╔═╡ ec8ae004-b945-4fe7-a32f-172ff5f6e82a
 begin
 	# Plot in time scale
 	tₐ=range(0,stop=length(sₐ)/Fs,length=length(sₐ))
-	plot(tₐ,sₐ,title="Note a", legend=false,xlabel="time (s)")
+	plot(tₐ,sₐ,title="Note A⁴", legend=false,xlabel="time (s)")
 end
 
 # ╔═╡ 72e0fc55-4c34-473a-b78b-b6910530b1e9
@@ -580,7 +571,7 @@ tₐ[end], length(sₐ)
 
 # ╔═╡ b9523247-9c65-4278-8e10-1050783ae73a
 md"
-Last part of the signal is just noise, so we create (or read) a shorter signal. $N$ must be odd.
+Second half of the signal is not interesting, so we create a shorter signal. $N$ must be odd.
 "
 
 # ╔═╡ 527f72cf-16de-4c16-bd96-4e6581687527
@@ -607,7 +598,7 @@ Let us visualize the signal in detail.
 @bind k Slider(1:1000:100001-1000,show_value=true)
 
 # ╔═╡ 533165d8-3c49-4609-8f69-1237c43b6946
-plot(tₐ[k:k+1000],s[k:k+1000], title="Note a",label=false,xlabel="time (s)")
+plot(tₐ[k:k+1000],s[k:k+1000], title="Note A⁴",label=false,xlabel="time (s)")
 
 # ╔═╡ 3873b054-5005-4b17-bae8-a51c44dca506
 # Save the short signal
@@ -618,7 +609,7 @@ begin
 	# Check the signal with FFT
 	# Notice 3 stronger harmonics and six weaker ones
 	fs=abs.(fft(s))
-	plot(Fs/length(fs)*(1:length(fs)),fs, title="FFT of note a",xlabel="Frequency", leg=false)
+	plot(Fs/length(fs)*(1:length(fs)),fs, title="FFT of the note A⁴",xlabel="Frequency", leg=false, xlims=(0,4000))
 end
 
 # ╔═╡ a1cf574f-db23-424f-aa0b-301770768323
@@ -633,7 +624,7 @@ Hₐ=Hankel(s);
 size(Hₐ), Hₐ[100,200]
 
 # ╔═╡ d539f8c0-2f35-4a88-9646-07aedff40bda
-# Get the idea about time to compute EVD
+# Get the idea about the time to compute EVD
 @time fft(s);
 
 # ╔═╡ 9575d673-a0e5-47d1-b109-9be6ee241623
@@ -657,14 +648,12 @@ Lₐ=round(Int,(sum(abs.(λₐ).>(τ*maximum(abs,λₐ)))/2))
 
 # ╔═╡ 1b3e2e57-7c3f-4365-8616-e4b46b046102
 md"""
-At this point, the implementation using full matrices is rather obvious. However, we cannot do that, due to large dimension. Recall, the task is to define Hankel matrices $H_k$ for $k=1,\ldots,L$, from the signal obtained by averaging the skew-diagonals of the matrices
+At this point, the implementation using full matrices is rather obvious. However, we cannot do that, due to the large dimension. Recall, ideally we should define the signal by averaging skew-diagonals of the Hankel matrices $H_k$ for $k=1,\ldots,L$,
 
 $$
 H_k=\lambda_k U_{:,k}U_{:,k}^T + \lambda_{n-k+1} U_{:,n-k+1}U_{:,n-k+1}^T,$$
 
-__without actually forming the matrices__.
-
-This is a nice programming excercise which can be solved using $\cdot$ products.
+This can be done without forming the matrices:
 """
 
 # ╔═╡ 93248879-4486-4059-a363-6c7b6a0015d8
@@ -681,44 +670,26 @@ function averages(λ::T, u::Vector{T}) where T
     λ*x
 end
 
-# ╔═╡ 251b6304-4314-479e-aa8a-d9e573d29c69
-begin
-	# A small test
-	u=[1,2,3,4,5]
-	u*u'
+# ╔═╡ 46f8977f-fe22-4efc-9724-6b8ca588414d
+#=
+xcompₐ=Array(Array{Float64},Lₐ)
+for k=1:Lₐ
+    xcompₐ[k]=averages(λₐ[2*k-1],Uₐ[:,2*k-1])+averages(λₐ[2*k],Uₐ[:,2*k])
 end
-
-# ╔═╡ 3d552383-bf50-422d-9d8a-e096cdb521c4
-averages(1,u)
+=#
 
 # ╔═╡ 949954b4-663d-4ef3-99b5-0df3c74a31e7
 md"""
-We now execute the first step of the algorithm from the above Fact.
-
-Notice that `eigs()` returns the eigenvalues arranged by the absoulte value, so the consecutive 
-pairs define the $i$-th signal. The computation of averages is long - it requires $O(n^2)$ 
-operations and takes several minutes.
+N.B. `eigs()` returns the eigenvalues arranged by the absoulte value, so the consecutive pairs define the $i$-th signal. 
 """
-
-# ╔═╡ 46f8977f-fe22-4efc-9724-6b8ca588414d
-# This step takes 7 minutes, so we skip it
-
-# xcompₐ=Array(Array{Float64},Lₐ)
-# for k=1:Lₐ
-#     xcompₐ[k]=averages(λₐ[2*k-1],Uₐ[:,2*k-1])+averages(λₐ[2*k],Uₐ[:,2*k])
-# end
 
 # ╔═╡ 8fc35997-f124-423e-b384-0f2369ecaa35
 md"""
-__Can we do without averaging?__
+However, function `averages()` is very slow - it requires $O(n^2)$ operations and takes 7 minutes, compared to 5 seconds for the eigenvalue computation.
 
-The function `averages()` is very slow - 7 minutes, compared to 5 seconds for the eigenvalue computation.
+The simplest option is to disregard the averages and use the first column and the last row of the underlying matrix, as in the definition of Hankel matrices, which we do next. 
 
-The simplest option is to disregard the averages, and use the first column and the last row of the underlying matrix, as in definition of Hankel matrices, which we do next. 
-Smarter approach might be to use small random samples 
-to compute the averages.
-
-Let us try the simple approach for the fundamental frequency. (See also the notebook [Examples in Signal Decomposition.ipynb](S8%20Examples%20in%20Signal%20Decomposition.ipynb).)
+(A smarter approach might be to approximate averages using small random samples.)
 """
 
 # ╔═╡ 84b53076-c26b-445a-a458-fe71cca242dc
@@ -738,41 +709,34 @@ md"""
 Let us look and listen to what we got:
 """
 
-# ╔═╡ 62c83b97-32ed-4c48-987e-bbbd95afbd20
-typeof(xcompₐ[1])
-
 # ╔═╡ 400fa7e6-6090-46fb-9610-ab3c816177c5
-@bind kₐ Slider(1:Lₐ,show_value=true)
+md"""
+Mono-component number $(@bind kₐ Slider(1:Lₐ,show_value=true))
+"""
 
 # ╔═╡ d33b3243-058c-446f-975a-0aee5b5426ac
 plot(t,xcompₐ[kₐ],title="Mono-component $(kₐ)",leg=false,xlabel="time (s)")
-
-# ╔═╡ 08f567b2-769a-498d-9a49-4fb82eae8639
-@bind lₐ Slider(1:1000:100001-1000,show_value=true)
-
-# ╔═╡ 9c452b24-0e8a-4b4e-a408-ea60da97a831
-# Details of a mono-component
-plot(t[lₐ:lₐ+1000],xcompₐ[kₐ][lₐ:lₐ+1000], title="Mono-component $(kₐ)",leg=false,xlabel="time (s)")
-
-# ╔═╡ 87f1dd44-5127-4c94-b0ef-4aa018029c18
-@bind k₂ Slider(1:Lₐ,show_value=true)
 
 # ╔═╡ 0d3e2f32-19fe-435d-96b6-83f047ecd8ef
 begin
 	# FFT of a mono-component and computed frequency
 	l₁=10000
-	fsₐ=abs.(fft(xcompₐ[k₂]))
+	fsₐ=abs.(fft(xcompₐ[kₐ]))
 	m,ind=findmax(fsₐ[1:l₁])
-	"Frequency of mono-component $(k₂) = ", ind*Fs/length(fsₐ)  ," Hz, Amplitude = ", m
+	"Frequency of mono-component $(kₐ) = ", ind*Fs/length(fsₐ)  ," Hz, Amplitude = ", m
 end
 
 # ╔═╡ cf6f1ff9-6439-4ef9-af20-f278495eb239
 # Plot the FFT
-plot(Fs/length(fsₐ)*(1:l₁),fsₐ[1:l₁], title="FFT of mono-component $(k₂)",leg=false,xlabel="Frequency")
+plot(Fs/length(fsₐ)*(1:l₁),fsₐ[1:l₁], title="FFT of mono-component $(kₐ)",leg=false,xlabel="Frequency")
+
+# ╔═╡ 847bb094-a2b8-4459-9d7b-f39bd3db2101
+# Listen to individual mono-components
+wavplay(xcompₐ[kₐ],Fs)
 
 # ╔═╡ e03267b6-1320-435a-818a-c2018556c25b
 md"""
-We see that all `xcompₐ[k]` are clean mono-components - see 
+We see and hear that all `xcompₐ[k]` are (almost 😀) clean mono-components - see 
 [Fundamental Frequencies of Notes ..](http://auditoryneuroscience.com/index.php/pitch/fundamental-frequencies-notes-western-music):
 
 ```
@@ -793,13 +757,6 @@ __N.B.__ Some mono-components are repeated, and they should be grouped by adding
 correlation larger than some prescribed threshold. 
 """
 
-# ╔═╡ 0f3840e7-0ca5-4d57-ac12-cd4df3c9caf3
-@bind k₃ Slider(1:Lₐ,show_value=true)
-
-# ╔═╡ 847bb094-a2b8-4459-9d7b-f39bd3db2101
-# Listen to individual mono-components
-wavplay(xcompₐ[k₃],Fs)
-
 # ╔═╡ 662b0be2-9f82-4980-83de-bb0143c28736
 # Store the mono-components
 for i=1:Lₐ
@@ -813,6 +770,11 @@ wavplay(sum([xcompₐ[i] for i=1:Lₐ]),Fs)
 # ╔═╡ 1fba26bb-4d17-4df8-8ce2-ca4185101681
 # Store the sum of mono-components
 wavwrite(sum([xcompₐ[i] for i=1:Lₐ]),"files/compsum.wav",Fs=Fs)
+
+# ╔═╡ 13e65ea8-e0c4-45ee-ae57-460310380097
+md"""
+## C-minor chord
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -843,9 +805,9 @@ WAV = "~1.2.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.2"
+julia_version = "1.11.1"
 manifest_format = "2.0"
-project_hash = "4b17c4e0f192a8ae1450ded05b8de18ab77ec26c"
+project_hash = "60f5ac1832d0de849086c7df37cfd805421a279f"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -863,13 +825,13 @@ version = "1.5.0"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
-git-tree-sha1 = "0f748c81756f2e5e6854298f11ad8b2dfae6911a"
+git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
 uuid = "6e696c72-6542-2067-7265-42206c756150"
-version = "1.3.0"
+version = "1.3.2"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
-version = "1.1.1"
+version = "1.1.2"
 
 [[deps.Arpack]]
 deps = ["Arpack_jll", "Libdl", "LinearAlgebra", "Logging"]
@@ -885,44 +847,46 @@ version = "3.5.1+1"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
+version = "1.11.0"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+version = "1.11.0"
 
 [[deps.BitFlags]]
-git-tree-sha1 = "2dc09997850d68179b69dafb58ae806167a32b1b"
+git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
 uuid = "d1d4a3ce-64b1-5f1a-9ba4-7e7e69966f35"
-version = "0.1.8"
+version = "0.1.9"
 
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "9e2a6b69137e6969bab0152632dcb3bc108c8bdd"
+git-tree-sha1 = "8873e196c2eb87962a2048b3b8e08946535864a1"
 uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
-version = "1.0.8+1"
+version = "1.0.8+2"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "a4c43f59baa34011e303e76f5c8c91bf58415aaf"
+git-tree-sha1 = "009060c9a6168704143100f36ab08f06c2af4642"
 uuid = "83423d85-b0ee-5818-9007-b63ccbeb887a"
-version = "1.18.0+1"
+version = "1.18.2+1"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
-git-tree-sha1 = "59939d8a997469ee05c4b4944560a820f9ba0d73"
+git-tree-sha1 = "bce6804e5e6044c6daab27bb533d1295e4a2e759"
 uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
-version = "0.7.4"
+version = "0.7.6"
 
 [[deps.ColorSchemes]]
 deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "PrecompileTools", "Random"]
-git-tree-sha1 = "67c1f244b991cad9b0aa4b7540fb758c2488b129"
+git-tree-sha1 = "c785dfb1b3bfddd1da557e861b919819b82bbe5b"
 uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.24.0"
+version = "3.27.1"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "eb7f0f8307f71fac7c606984ea5fb2817275d6e4"
+git-tree-sha1 = "b10d0b65641d57b8b4d5e234446582de5047050d"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.11.4"
+version = "0.11.5"
 
 [[deps.ColorVectorSpace]]
 deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "Requires", "Statistics", "TensorCore"]
@@ -936,15 +900,15 @@ weakdeps = ["SpecialFunctions"]
 
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
-git-tree-sha1 = "fc08e5930ee9a4e03f84bfb5211cb54e7769758a"
+git-tree-sha1 = "64e15186f0aa277e174aa81798f7eb8598e0157e"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
-version = "0.12.10"
+version = "0.13.0"
 
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
-git-tree-sha1 = "c955881e3c981181362ae4088b35995446298b80"
+git-tree-sha1 = "8ae8d32e09f0dcf42a36b90d4e17f5dd2e4c4215"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.14.0"
+version = "4.16.0"
 weakdeps = ["Dates", "LinearAlgebra"]
 
     [deps.Compat.extensions]
@@ -953,13 +917,13 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.0+0"
+version = "1.1.1+0"
 
 [[deps.ConcurrentUtilities]]
 deps = ["Serialization", "Sockets"]
-git-tree-sha1 = "6cbbd4d241d7e6579ab354737f4dd95ca43946e1"
+git-tree-sha1 = "ea32b83ca4fefa1768dc84e504cc0a94fb1ab8d1"
 uuid = "f0e56b4a-5159-44fe-b623-3e5288b988bb"
-version = "2.4.1"
+version = "2.4.2"
 
 [[deps.Contour]]
 git-tree-sha1 = "439e35b0b36e2e5881738abc8857bd92ad6ff9a8"
@@ -968,9 +932,9 @@ version = "0.6.3"
 
 [[deps.DSP]]
 deps = ["Compat", "FFTW", "IterTools", "LinearAlgebra", "Polynomials", "Random", "Reexport", "SpecialFunctions", "Statistics"]
-git-tree-sha1 = "f7f4319567fe769debfcf7f8c03d8da1dd4e2fb0"
+git-tree-sha1 = "0df00546373af8eee1598fb4b2ba480b1ebe895c"
 uuid = "717857b8-e6f2-59f4-9121-6e50c889abd2"
-version = "0.7.9"
+version = "0.7.10"
 
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
@@ -979,13 +943,20 @@ version = "1.16.0"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "0f4b5d62a88d8f59003e43c25a8a90de9eb76317"
+git-tree-sha1 = "1d0a14036acb104d9e89698bd408f63ab58cdc82"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.18.18"
+version = "0.18.20"
 
 [[deps.Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
+version = "1.11.0"
+
+[[deps.Dbus_jll]]
+deps = ["Artifacts", "Expat_jll", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "fc173b380865f70627d7dd1190dc2fce6cc105af"
+uuid = "ee1fde0b-3d02-5ea6-8484-8dfef6360eab"
+version = "1.14.10+0"
 
 [[deps.DelimitedFiles]]
 deps = ["Mmap"]
@@ -1018,15 +989,15 @@ version = "0.1.10"
 
 [[deps.Expat_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "4558ab818dcceaab612d1bb8c19cee87eda2b83c"
+git-tree-sha1 = "cc5231d52eb1771251fbd37171dbc408bcc8a1b6"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
-version = "2.5.0+0"
+version = "2.6.4+0"
 
 [[deps.FFMPEG]]
 deps = ["FFMPEG_jll"]
-git-tree-sha1 = "b57e3acbe22f8484b4b5ff66a7499717fe1a9cc8"
+git-tree-sha1 = "53ebe7511fa11d33bec688a9178fac4e49eeee00"
 uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
-version = "0.4.1"
+version = "0.4.2"
 
 [[deps.FFMPEG_jll]]
 deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "PCRE2_jll", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
@@ -1042,24 +1013,29 @@ version = "1.8.0"
 
 [[deps.FFTW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "c6033cc3892d0ef5bb9cd29b7f2f0331ea5184ea"
+git-tree-sha1 = "4d81ed14783ec49ce9f2e168208a12ce1815aa25"
 uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
-version = "3.3.10+0"
+version = "3.3.10+1"
 
 [[deps.FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
-git-tree-sha1 = "82d8afa92ecf4b52d78d869f038ebfb881267322"
+git-tree-sha1 = "2dd20384bf8c6d411b5c7370865b1e9b26cb2ea3"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.16.3"
+version = "1.16.6"
+weakdeps = ["HTTP"]
+
+    [deps.FileIO.extensions]
+    HTTPExt = "HTTP"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
+version = "1.11.0"
 
 [[deps.FillArrays]]
-deps = ["LinearAlgebra", "Random"]
-git-tree-sha1 = "5b93957f6dcd33fc343044af3d48c215be2562f1"
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "6a70198746448456524cb442b8af316927ff3e1a"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "1.9.3"
+version = "1.13.0"
 
     [deps.FillArrays.extensions]
     FillArraysPDMatsExt = "PDMats"
@@ -1073,15 +1049,15 @@ version = "1.9.3"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
-git-tree-sha1 = "335bfdceacc84c5cdf16aadc768aa5ddfc5383cc"
+git-tree-sha1 = "05882d6995ae5c12bb5f36dd2ed3f61c98cbb172"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
-version = "0.8.4"
+version = "0.8.5"
 
 [[deps.Fontconfig_jll]]
-deps = ["Artifacts", "Bzip2_jll", "Expat_jll", "FreeType2_jll", "JLLWrappers", "Libdl", "Libuuid_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "21efd19106a55620a188615da6d3d06cd7f6ee03"
+deps = ["Artifacts", "Bzip2_jll", "Expat_jll", "FreeType2_jll", "JLLWrappers", "Libdl", "Libuuid_jll", "Zlib_jll"]
+git-tree-sha1 = "db16beca600632c95fc8aca29890d83788dd8b23"
 uuid = "a3f928ae-7b40-5064-980b-68af3947d34b"
-version = "2.13.93+0"
+version = "2.13.96+0"
 
 [[deps.Format]]
 git-tree-sha1 = "9c68794ef81b08086aeb32eeaf33531668d5f5fc"
@@ -1090,33 +1066,33 @@ version = "1.3.7"
 
 [[deps.FreeType2_jll]]
 deps = ["Artifacts", "Bzip2_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
-git-tree-sha1 = "d8db6a5a2fe1381c1ea4ef2cab7c69c2de7f9ea0"
+git-tree-sha1 = "5c1d8ae0efc6c2e7b1fc502cbe25def8f661b7bc"
 uuid = "d7e528f0-a631-5988-bf34-fe36492bcfd7"
-version = "2.13.1+0"
+version = "2.13.2+0"
 
 [[deps.FriBidi_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "aa31987c2ba8704e23c6c8ba8a4f769d5d7e4f91"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "1ed150b39aebcc805c26b93a8d0122c940f64ce2"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
-version = "1.0.10+0"
+version = "1.0.14+0"
 
 [[deps.GLFW_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Xorg_libXcursor_jll", "Xorg_libXi_jll", "Xorg_libXinerama_jll", "Xorg_libXrandr_jll"]
-git-tree-sha1 = "ff38ba61beff76b8f4acad8ab0c97ef73bb670cb"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Xorg_libXcursor_jll", "Xorg_libXi_jll", "Xorg_libXinerama_jll", "Xorg_libXrandr_jll", "libdecor_jll", "xkbcommon_jll"]
+git-tree-sha1 = "532f9126ad901533af1d4f5c198867227a7bb077"
 uuid = "0656b61e-2033-5cc2-a64a-77c0f6c09b89"
-version = "3.3.9+0"
+version = "3.4.0+1"
 
 [[deps.GR]]
-deps = ["Artifacts", "Base64", "DelimitedFiles", "Downloads", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Preferences", "Printf", "Random", "Serialization", "Sockets", "TOML", "Tar", "Test", "UUIDs", "p7zip_jll"]
-git-tree-sha1 = "3437ade7073682993e092ca570ad68a2aba26983"
+deps = ["Artifacts", "Base64", "DelimitedFiles", "Downloads", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Preferences", "Printf", "Qt6Wayland_jll", "Random", "Serialization", "Sockets", "TOML", "Tar", "Test", "p7zip_jll"]
+git-tree-sha1 = "ee28ddcd5517d54e417182fec3886e7412d3926f"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.73.3"
+version = "0.73.8"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "FreeType2_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Qt6Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "a96d5c713e6aa28c242b0d25c1347e258d6541ab"
+git-tree-sha1 = "f31929b9e67066bee48eec8b03c0df47d31a74b3"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.73.3+0"
+version = "0.73.8+0"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -1126,9 +1102,9 @@ version = "0.21.0+0"
 
 [[deps.Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE2_jll", "Zlib_jll"]
-git-tree-sha1 = "359a1ba2e320790ddbe4ee8b4d54a305c0ea2aff"
+git-tree-sha1 = "674ff0db93fffcd11a3573986e550d66cd4fd71f"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
-version = "2.80.0+0"
+version = "2.80.5+0"
 
 [[deps.Graphite2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1143,15 +1119,15 @@ version = "1.0.2"
 
 [[deps.HTTP]]
 deps = ["Base64", "CodecZlib", "ConcurrentUtilities", "Dates", "ExceptionUnwrapping", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
-git-tree-sha1 = "8e59b47b9dc525b70550ca082ce85bcd7f5477cd"
+git-tree-sha1 = "1336e07ba2eb75614c99496501a8f4b233e9fafe"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "1.10.5"
+version = "1.10.10"
 
 [[deps.HarfBuzz_jll]]
-deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
-git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
+deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll"]
+git-tree-sha1 = "401e4f3f30f43af2c8478fc008da50096ea5240f"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
-version = "2.8.1+1"
+version = "8.3.1+0"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
@@ -1167,19 +1143,20 @@ version = "0.9.5"
 
 [[deps.IOCapture]]
 deps = ["Logging", "Random"]
-git-tree-sha1 = "8b72179abc660bfab5e28472e019392b97d0985c"
+git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
-version = "0.2.4"
+version = "0.2.5"
 
 [[deps.IntelOpenMP_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "5fdf2fe6724d8caabf43b557b84ce53f3b7e2f6b"
+deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl"]
+git-tree-sha1 = "10bd689145d2c3b2a9844005d01087cc1194e79e"
 uuid = "1d5cc7b8-4909-519e-a0f8-d0f5ad9712d0"
-version = "2024.0.2+0"
+version = "2024.2.1+0"
 
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+version = "1.11.0"
 
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
@@ -1193,15 +1170,15 @@ version = "1.10.0"
 
 [[deps.JLFzf]]
 deps = ["Pipe", "REPL", "Random", "fzf_jll"]
-git-tree-sha1 = "a53ebe394b71470c7f97c2e7e170d51df21b17af"
+git-tree-sha1 = "39d64b09147620f5ffbf6b2d3255be3c901bec63"
 uuid = "1019f520-868f-41f5-a6de-eb00f4b6a39c"
-version = "0.1.7"
+version = "0.1.8"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
-git-tree-sha1 = "7e5d6779a1e09a36db2a7b6cff50942a0a7d0fca"
+git-tree-sha1 = "be3dc50a92e5a386872a493a10050136d4703f9b"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
-version = "1.5.0"
+version = "1.6.1"
 
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
@@ -1211,56 +1188,59 @@ version = "0.21.4"
 
 [[deps.JpegTurbo_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "3336abae9a713d2210bb57ab484b1e065edd7d23"
+git-tree-sha1 = "25ee0be4d43d0269027024d75a24c24d6c6e590c"
 uuid = "aacddb02-875f-59d6-b918-886e6ef4fbf8"
-version = "3.0.2+0"
+version = "3.0.4+0"
 
 [[deps.LAME_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "f6250b16881adf048549549fba48b1161acdac8c"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "170b660facf5df5de098d866564877e119141cbd"
 uuid = "c1c5ebd0-6772-5130-a774-d5fcae4a789d"
-version = "3.100.1+0"
+version = "3.100.2+0"
 
 [[deps.LERC_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "bf36f528eec6634efc60d7ec062008f171071434"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "36bdbc52f13a7d1dcb0f3cd694e01677a515655b"
 uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
-version = "3.0.0+1"
+version = "4.0.0+0"
 
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "d986ce2d884d49126836ea94ed5bfb0f12679713"
+git-tree-sha1 = "78211fb6cbc872f77cad3fc0b6cf647d923f4929"
 uuid = "1d63c593-3942-5779-bab2-d838dc0a180e"
-version = "15.0.7+0"
+version = "18.1.7+0"
 
 [[deps.LZO_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "e5b909bcf985c5e2605737d2ce278ed791b89be6"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "854a9c268c43b77b0a27f22d7fab8d33cdb3a731"
 uuid = "dd4b983a-f0e5-5f8d-a1b7-129d4a5fb1ac"
-version = "2.10.1+0"
+version = "2.10.2+1"
 
 [[deps.LaTeXStrings]]
-git-tree-sha1 = "50901ebc375ed41dbf8058da26f9de442febbbec"
+git-tree-sha1 = "dda21b8cbd6a6c40d9d02a73230f9d70fed6918c"
 uuid = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
-version = "1.3.1"
+version = "1.4.0"
 
 [[deps.Latexify]]
 deps = ["Format", "InteractiveUtils", "LaTeXStrings", "MacroTools", "Markdown", "OrderedCollections", "Requires"]
-git-tree-sha1 = "cad560042a7cc108f5a4c24ea1431a9221f22c1b"
+git-tree-sha1 = "ce5f5621cac23a86011836badfedf664a612cee4"
 uuid = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
-version = "0.16.2"
+version = "0.16.5"
 
     [deps.Latexify.extensions]
     DataFramesExt = "DataFrames"
+    SparseArraysExt = "SparseArrays"
     SymEngineExt = "SymEngine"
 
     [deps.Latexify.weakdeps]
     DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+    SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
 
 [[deps.LazyArtifacts]]
 deps = ["Artifacts", "Pkg"]
 uuid = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
+version = "1.11.0"
 
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -1270,16 +1250,17 @@ version = "0.6.4"
 [[deps.LibCURL_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
 uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
-version = "8.4.0+0"
+version = "8.6.0+0"
 
 [[deps.LibGit2]]
 deps = ["Base64", "LibGit2_jll", "NetworkOptions", "Printf", "SHA"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
+version = "1.11.0"
 
 [[deps.LibGit2_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll"]
 uuid = "e37daf67-58a4-590a-8e99-b0245dd2ffc5"
-version = "1.6.4+0"
+version = "1.7.2+0"
 
 [[deps.LibSSH2_jll]]
 deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
@@ -1288,6 +1269,7 @@ version = "1.11.0+1"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+version = "1.11.0"
 
 [[deps.Libffi_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1296,10 +1278,10 @@ uuid = "e9f186c6-92d2-5b65-8a66-fee21dc1b490"
 version = "3.2.2+1"
 
 [[deps.Libgcrypt_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgpg_error_jll", "Pkg"]
-git-tree-sha1 = "64613c82a59c120435c067c2b809fc61cf5166ae"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgpg_error_jll"]
+git-tree-sha1 = "8be878062e0ffa2c3f67bb58a595375eda5de80b"
 uuid = "d4300ac3-e22c-5743-9152-c294e39db1e4"
-version = "1.8.7+0"
+version = "1.11.0+0"
 
 [[deps.Libglvnd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "Xorg_libX11_jll", "Xorg_libXext_jll"]
@@ -1308,44 +1290,45 @@ uuid = "7e76a0d4-f3c7-5321-8279-8d96eeed0f29"
 version = "1.6.0+0"
 
 [[deps.Libgpg_error_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "c333716e46366857753e273ce6a69ee0945a6db9"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "c6ce1e19f3aec9b59186bdf06cdf3c4fc5f5f3e6"
 uuid = "7add5ba3-2f88-524e-9cd5-f83b8a55f7b8"
-version = "1.42.0+0"
+version = "1.50.0+0"
 
 [[deps.Libiconv_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "f9557a255370125b405568f9767d6d195822a175"
+git-tree-sha1 = "61dfdba58e585066d8bce214c5a51eaa0539f269"
 uuid = "94ce4f54-9a6c-5748-9c1c-f9c7231a4531"
-version = "1.17.0+0"
+version = "1.17.0+1"
 
 [[deps.Libmount_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "dae976433497a2f841baadea93d27e68f1a12a97"
+git-tree-sha1 = "0c4f9c4f1a50d8f35048fa0532dabbadf702f81e"
 uuid = "4b2f31a3-9ecc-558c-b454-b3730dcb73e9"
-version = "2.39.3+0"
+version = "2.40.1+0"
 
 [[deps.Libtiff_jll]]
 deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "XZ_jll", "Zlib_jll", "Zstd_jll"]
-git-tree-sha1 = "2da088d113af58221c52828a80378e16be7d037a"
+git-tree-sha1 = "b404131d06f7886402758c9ce2214b636eb4d54a"
 uuid = "89763e89-9b03-5906-acba-b20f662cd828"
-version = "4.5.1+1"
+version = "4.7.0+0"
 
 [[deps.Libuuid_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "0a04a1318df1bf510beb2562cf90fb0c386f58c4"
+git-tree-sha1 = "5ee6203157c120d79034c748a2acba45b82b8807"
 uuid = "38a345b3-de98-5d2b-a5d3-14cd9215e700"
-version = "2.39.3+1"
+version = "2.40.1+0"
 
 [[deps.LinearAlgebra]]
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+version = "1.11.0"
 
 [[deps.LinearMaps]]
 deps = ["LinearAlgebra"]
-git-tree-sha1 = "9948d6f8208acfebc3e8cf4681362b2124339e7e"
+git-tree-sha1 = "ee79c3208e55786de58f8dcccca098ced79f743f"
 uuid = "7a12625a-238d-50fd-b39a-03d52299707e"
-version = "3.11.2"
+version = "3.11.3"
 
     [deps.LinearMaps.extensions]
     LinearMapsChainRulesCoreExt = "ChainRulesCore"
@@ -1359,9 +1342,9 @@ version = "3.11.2"
 
 [[deps.LogExpFunctions]]
 deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "18144f3e9cbe9b15b070288eef858f71b291ce37"
+git-tree-sha1 = "a2d09619db4e765091ee5c6ffe8872849de0feea"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.27"
+version = "0.3.28"
 
     [deps.LogExpFunctions.extensions]
     LogExpFunctionsChainRulesCoreExt = "ChainRulesCore"
@@ -1375,12 +1358,13 @@ version = "0.3.27"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+version = "1.11.0"
 
 [[deps.LoggingExtras]]
 deps = ["Dates", "Logging"]
-git-tree-sha1 = "c1dd6d7978c12545b4179fb6153b9250c96b0075"
+git-tree-sha1 = "f02b56007b064fbfddb4c9cd60161b6dd0f40df3"
 uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
-version = "1.0.3"
+version = "1.1.0"
 
 [[deps.MIMEs]]
 git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
@@ -1388,10 +1372,10 @@ uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
 version = "0.1.4"
 
 [[deps.MKL_jll]]
-deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl"]
-git-tree-sha1 = "72dc3cf284559eb8f53aa593fe62cb33f83ed0c0"
+deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
+git-tree-sha1 = "f046ccd0c6db2832a9f639e2c669c6fe867e5f4f"
 uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
-version = "2024.0.0+0"
+version = "2024.2.0+0"
 
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
@@ -1402,6 +1386,7 @@ version = "0.5.13"
 [[deps.Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
+version = "1.11.0"
 
 [[deps.MbedTLS]]
 deps = ["Dates", "MbedTLS_jll", "MozillaCACerts_jll", "NetworkOptions", "Random", "Sockets"]
@@ -1412,7 +1397,7 @@ version = "1.1.9"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.2+1"
+version = "2.28.6+0"
 
 [[deps.Measures]]
 git-tree-sha1 = "c13304c81eec1ed3af7fc20e75fb6b26092a1102"
@@ -1421,16 +1406,17 @@ version = "0.3.2"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
-git-tree-sha1 = "f66bdc5de519e8f8ae43bdc598782d35a25b1272"
+git-tree-sha1 = "ec4f7fbeab05d7747bdf98eb74d130a2a2ed298d"
 uuid = "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28"
-version = "1.1.0"
+version = "1.2.0"
 
 [[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
+version = "1.11.0"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2023.1.10"
+version = "2023.12.12"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -1451,7 +1437,7 @@ version = "1.3.5+1"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.23+4"
+version = "0.3.27+1"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1460,15 +1446,15 @@ version = "0.8.1+2"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
-git-tree-sha1 = "af81a32750ebc831ee28bdaaba6e1067decef51e"
+git-tree-sha1 = "38cb508d080d21dc1128f7fb04f20387ed4c0af4"
 uuid = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
-version = "1.4.2"
+version = "1.4.3"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "3da7367955dcc5c54c1ba4d402ccdc09a1a3e046"
+git-tree-sha1 = "7493f61f55a6cce7325f197443aa80d32554ba10"
 uuid = "458c3c95-2e84-50aa-8efc-19380b2a3a95"
-version = "3.0.13+1"
+version = "3.0.15+1"
 
 [[deps.OpenSpecFun_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
@@ -1477,10 +1463,10 @@ uuid = "efe28fd5-8261-553b-a9e1-b2916fc3738e"
 version = "0.5.5+0"
 
 [[deps.Opus_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "51a08fb14ec28da2ec7a927c4337e4332c2a4720"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "6703a85cb3781bd5909d48730a67205f3f31a575"
 uuid = "91d4177d-7536-5919-b921-800302f37372"
-version = "1.3.2+0"
+version = "1.3.3+0"
 
 [[deps.OrderedCollections]]
 git-tree-sha1 = "dfdf5519f235516220579f949664f1bf44e741c5"
@@ -1491,6 +1477,12 @@ version = "1.6.3"
 deps = ["Artifacts", "Libdl"]
 uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
 version = "10.42.0+1"
+
+[[deps.Pango_jll]]
+deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "e127b609fb9ecba6f201ba7ab753d5a605d53801"
+uuid = "36c8627f-9965-5494-a995-c6b170f724f3"
+version = "1.54.1+0"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
@@ -1505,32 +1497,36 @@ version = "1.3.0"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "LLVMOpenMP_jll", "Libdl"]
-git-tree-sha1 = "64779bc4c9784fee475689a1752ef4d5747c5e87"
+git-tree-sha1 = "35621f10a7531bc8fa58f74610b1bfb70a3cfc6b"
 uuid = "30392449-352a-5448-841d-b1acce4e97dc"
-version = "0.42.2+0"
+version = "0.43.4+0"
 
 [[deps.Pkg]]
-deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
+deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "Random", "SHA", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.10.0"
+version = "1.11.0"
+weakdeps = ["REPL"]
+
+    [deps.Pkg.extensions]
+    REPLExt = "REPL"
 
 [[deps.PlotThemes]]
 deps = ["PlotUtils", "Statistics"]
-git-tree-sha1 = "1f03a2d339f42dca4a4da149c7e15e9b896ad899"
+git-tree-sha1 = "41031ef3a1be6f5bbbf3e8073f210556daeae5ca"
 uuid = "ccf2f8ad-2431-5c83-bf29-c5338b663b6a"
-version = "3.1.0"
+version = "3.3.0"
 
 [[deps.PlotUtils]]
-deps = ["ColorSchemes", "Colors", "Dates", "PrecompileTools", "Printf", "Random", "Reexport", "Statistics"]
-git-tree-sha1 = "7b1a9df27f072ac4c9c7cbe5efb198489258d1f5"
+deps = ["ColorSchemes", "Colors", "Dates", "PrecompileTools", "Printf", "Random", "Reexport", "StableRNGs", "Statistics"]
+git-tree-sha1 = "3ca9a356cd2e113c420f2c13bea19f8d3fb1cb18"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
-version = "1.4.1"
+version = "1.4.3"
 
 [[deps.Plots]]
-deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "JLFzf", "JSON", "LaTeXStrings", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "PrecompileTools", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "RelocatableFolders", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs", "UnicodeFun", "UnitfulLatexify", "Unzip"]
-git-tree-sha1 = "3bdfa4fa528ef21287ef659a89d686e8a1bcb1a9"
+deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "JLFzf", "JSON", "LaTeXStrings", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "PrecompileTools", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "RelocatableFolders", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "TOML", "UUIDs", "UnicodeFun", "UnitfulLatexify", "Unzip"]
+git-tree-sha1 = "dae01f8c2e069a683d3a6e17bbae5070ab94786f"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.40.3"
+version = "1.40.9"
 
     [deps.Plots.extensions]
     FileIOExt = "FileIO"
@@ -1548,9 +1544,9 @@ version = "1.40.3"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "71a22244e352aa8c5f0f2adde4150f62368a3f2e"
+git-tree-sha1 = "eba4810d5e6a01f612b948c9fa94f905b49087b0"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.58"
+version = "0.7.60"
 
 [[deps.Polynomials]]
 deps = ["LinearAlgebra", "RecipesBase"]
@@ -1583,20 +1579,41 @@ version = "1.4.3"
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+version = "1.11.0"
 
 [[deps.Qt6Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Vulkan_Loader_jll", "Xorg_libSM_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_cursor_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "libinput_jll", "xkbcommon_jll"]
-git-tree-sha1 = "37b7bb7aabf9a085e0044307e1717436117f2b3b"
+git-tree-sha1 = "492601870742dcd38f233b23c3ec629628c1d724"
 uuid = "c0090381-4147-56d7-9ebc-da0b1113ec56"
-version = "6.5.3+1"
+version = "6.7.1+1"
+
+[[deps.Qt6Declarative_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Qt6Base_jll", "Qt6ShaderTools_jll"]
+git-tree-sha1 = "e5dd466bf2569fe08c91a2cc29c1003f4797ac3b"
+uuid = "629bc702-f1f5-5709-abd5-49b8460ea067"
+version = "6.7.1+2"
+
+[[deps.Qt6ShaderTools_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Qt6Base_jll"]
+git-tree-sha1 = "1a180aeced866700d4bebc3120ea1451201f16bc"
+uuid = "ce943373-25bb-56aa-8eca-768745ed7b5a"
+version = "6.7.1+1"
+
+[[deps.Qt6Wayland_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Qt6Base_jll", "Qt6Declarative_jll"]
+git-tree-sha1 = "729927532d48cf79f49070341e1d918a65aba6b0"
+uuid = "e99dba38-086e-5de3-a5b1-6e4c66e897c3"
+version = "6.7.1+1"
 
 [[deps.REPL]]
-deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
+deps = ["InteractiveUtils", "Markdown", "Sockets", "StyledStrings", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
+version = "1.11.0"
 
 [[deps.Random]]
 deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+version = "1.11.0"
 
 [[deps.RecipesBase]]
 deps = ["PrecompileTools"]
@@ -1639,6 +1656,7 @@ version = "1.2.1"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+version = "1.11.0"
 
 [[deps.Showoff]]
 deps = ["Dates", "Grisu"]
@@ -1647,12 +1665,13 @@ uuid = "992d4aef-0814-514b-bc4d-f2e9a6c4116f"
 version = "1.0.3"
 
 [[deps.SimpleBufferStream]]
-git-tree-sha1 = "874e8867b33a00e784c8a7e4b60afe9e037b74e1"
+git-tree-sha1 = "f305871d2f381d21527c770d4788c06c097c9bc1"
 uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
-version = "1.1.0"
+version = "1.2.0"
 
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
+version = "1.11.0"
 
 [[deps.SortingAlgorithms]]
 deps = ["DataStructures"]
@@ -1663,13 +1682,13 @@ version = "1.2.1"
 [[deps.SparseArrays]]
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-version = "1.10.0"
+version = "1.11.0"
 
 [[deps.SpecialFunctions]]
 deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
-git-tree-sha1 = "e2cfc4012a19088254b3950b85c3c1d8882d864d"
+git-tree-sha1 = "2f5d4697f21388cbe1ff299430dd169ef97d7e14"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "2.3.1"
+version = "2.4.0"
 
     [deps.SpecialFunctions.extensions]
     SpecialFunctionsChainRulesCoreExt = "ChainRulesCore"
@@ -1683,10 +1702,21 @@ git-tree-sha1 = "8fd75ee3d16a83468a96fd29a1913fb170d2d2fd"
 uuid = "928aab9d-ef52-54ac-8ca1-acd7ca42c160"
 version = "3.0.0"
 
+[[deps.StableRNGs]]
+deps = ["Random"]
+git-tree-sha1 = "83e6cce8324d49dfaf9ef059227f91ed4441a8e5"
+uuid = "860ef19b-820b-49d6-a774-d7a799459cd3"
+version = "1.0.2"
+
 [[deps.Statistics]]
-deps = ["LinearAlgebra", "SparseArrays"]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "ae3bb1eb3bba077cd276bc5cfc337cc65c3075c0"
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-version = "1.10.0"
+version = "1.11.1"
+weakdeps = ["SparseArrays"]
+
+    [deps.Statistics.extensions]
+    SparseArraysExt = ["SparseArrays"]
 
 [[deps.StatsAPI]]
 deps = ["LinearAlgebra"]
@@ -1696,14 +1726,18 @@ version = "1.7.0"
 
 [[deps.StatsBase]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
-git-tree-sha1 = "1d77abd07f617c4868c33d4f5b9e1dbb2643c9cf"
+git-tree-sha1 = "5cf7606d6cef84b543b483848d4ae08ad9832b21"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.34.2"
+version = "0.34.3"
+
+[[deps.StyledStrings]]
+uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
+version = "1.11.0"
 
 [[deps.SuiteSparse_jll]]
 deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
 uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
-version = "7.2.1+1"
+version = "7.7.0+0"
 
 [[deps.TOML]]
 deps = ["Dates"]
@@ -1724,30 +1758,27 @@ version = "0.1.1"
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+version = "1.11.0"
 
 [[deps.ToeplitzMatrices]]
 deps = ["AbstractFFTs", "DSP", "FillArrays", "LinearAlgebra"]
-git-tree-sha1 = "df4e499f6321e72f801aab45336ba76ed06e97db"
+git-tree-sha1 = "05a042dcb3dabaedb4f1c20de0932c34a0fcee76"
 uuid = "c751599d-da0a-543b-9d20-d0a503d91d24"
-version = "0.8.3"
+version = "0.8.4"
 weakdeps = ["StatsBase"]
 
     [deps.ToeplitzMatrices.extensions]
     ToeplitzMatricesStatsBaseExt = "StatsBase"
 
 [[deps.TranscodingStreams]]
-git-tree-sha1 = "71509f04d045ec714c4748c785a59045c3736349"
+git-tree-sha1 = "0c45878dcfdcfa8480052b6ab162cdd138781742"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.10.7"
-weakdeps = ["Random", "Test"]
-
-    [deps.TranscodingStreams.extensions]
-    TestExt = ["Test", "Random"]
+version = "0.11.3"
 
 [[deps.Tricks]]
-git-tree-sha1 = "eae1bb484cd63b36999ee58be2de6c178105112f"
+git-tree-sha1 = "7822b97e99a1672bfb1b49b668a6d46d58d8cbcb"
 uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
-version = "0.1.8"
+version = "0.1.9"
 
 [[deps.URIs]]
 git-tree-sha1 = "67db6cc7b3821e19ebe75791a9dd19c9b1188f2b"
@@ -1757,9 +1788,11 @@ version = "1.5.1"
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+version = "1.11.0"
 
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
+version = "1.11.0"
 
 [[deps.UnicodeFun]]
 deps = ["REPL"]
@@ -1769,9 +1802,9 @@ version = "0.4.1"
 
 [[deps.Unitful]]
 deps = ["Dates", "LinearAlgebra", "Random"]
-git-tree-sha1 = "3c793be6df9dd77a0cf49d80984ef9ff996948fa"
+git-tree-sha1 = "d95fe458f26209c66a187b1114df96fd70839efd"
 uuid = "1986cc42-f94f-5a68-af5c-568840ba703d"
-version = "1.19.0"
+version = "1.21.0"
 
     [deps.Unitful.extensions]
     ConstructionBaseUnitfulExt = "ConstructionBase"
@@ -1783,9 +1816,9 @@ version = "1.19.0"
 
 [[deps.UnitfulLatexify]]
 deps = ["LaTeXStrings", "Latexify", "Unitful"]
-git-tree-sha1 = "e2d817cc500e960fdbafcf988ac8436ba3208bfd"
+git-tree-sha1 = "975c354fcd5f7e1ddcc1f1a23e6e091d99e99bc8"
 uuid = "45397f5d-5981-4c77-b2b3-fc36d6e9b728"
-version = "1.6.3"
+version = "1.6.4"
 
 [[deps.Unzip]]
 git-tree-sha1 = "ca0969166a028236229f63514992fc073799bb78"
@@ -1818,33 +1851,33 @@ version = "1.31.0+0"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
-git-tree-sha1 = "532e22cf7be8462035d092ff21fada7527e2c488"
+git-tree-sha1 = "a2fccc6559132927d4c5dc183e3e01048c6dcbd6"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
-version = "2.12.6+0"
+version = "2.13.5+0"
 
 [[deps.XSLT_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll", "Libiconv_jll", "Pkg", "XML2_jll", "Zlib_jll"]
-git-tree-sha1 = "91844873c4085240b95e795f692c4cec4d805f8a"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll", "Libiconv_jll", "XML2_jll", "Zlib_jll"]
+git-tree-sha1 = "a54ee957f4c86b526460a720dbc882fa5edcbefc"
 uuid = "aed1982a-8fda-507f-9586-7b0439959a61"
-version = "1.1.34+0"
+version = "1.1.41+0"
 
 [[deps.XZ_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "ac88fb95ae6447c8dda6a5503f3bafd496ae8632"
+git-tree-sha1 = "15e637a697345f6743674f1322beefbc5dcd5cfc"
 uuid = "ffd25f8a-64ca-5728-b0f7-c24cf3aae800"
-version = "5.4.6+0"
+version = "5.6.3+0"
 
 [[deps.Xorg_libICE_jll]]
-deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "e5becd4411063bdcac16be8b66fc2f9f6f1e8fe5"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "326b4fea307b0b39892b3e85fa451692eda8d46c"
 uuid = "f67eecfb-183a-506d-b269-f58e52b52d7c"
-version = "1.0.10+1"
+version = "1.1.1+0"
 
 [[deps.Xorg_libSM_jll]]
-deps = ["Libdl", "Pkg", "Xorg_libICE_jll"]
-git-tree-sha1 = "4a9d9e4c180e1e8119b5ffc224a7b59d3a7f7e18"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libICE_jll"]
+git-tree-sha1 = "3796722887072218eabafb494a13c963209754ce"
 uuid = "c834827a-8449-5923-a945-d239c165b7dd"
-version = "1.2.3+0"
+version = "1.2.4+0"
 
 [[deps.Xorg_libX11_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libxcb_jll", "Xorg_xtrans_jll"]
@@ -1871,10 +1904,10 @@ uuid = "a3789734-cfe1-5b06-b2d0-1dd0d9d62d05"
 version = "1.1.4+0"
 
 [[deps.Xorg_libXext_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "Xorg_libX11_jll"]
-git-tree-sha1 = "b7c0aa8c376b31e4852b360222848637f481f8c3"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libX11_jll"]
+git-tree-sha1 = "d2d1a5c49fae4ba39983f63de6afcbea47194e85"
 uuid = "1082639a-0dae-5f34-9b06-72781eeb8cb3"
-version = "1.3.4+4"
+version = "1.3.6+0"
 
 [[deps.Xorg_libXfixes_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "Xorg_libX11_jll"]
@@ -1901,10 +1934,10 @@ uuid = "ec84b674-ba8e-5d96-8ba1-2a689ba10484"
 version = "1.5.2+4"
 
 [[deps.Xorg_libXrender_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "Xorg_libX11_jll"]
-git-tree-sha1 = "19560f30fd49f4d4efbe7002a1037f8c43d43b96"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libX11_jll"]
+git-tree-sha1 = "47e45cd78224c53109495b3e324df0c37bb61fbe"
 uuid = "ea2f1a96-1ddc-540d-b46f-429655e07cfa"
-version = "0.9.10+4"
+version = "0.9.11+0"
 
 [[deps.Xorg_libpthread_stubs_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1914,9 +1947,9 @@ version = "0.1.1+0"
 
 [[deps.Xorg_libxcb_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "XSLT_jll", "Xorg_libXau_jll", "Xorg_libXdmcp_jll", "Xorg_libpthread_stubs_jll"]
-git-tree-sha1 = "b4bfde5d5b652e22b9c790ad00af08b6d042b97d"
+git-tree-sha1 = "bcd466676fef0878338c61e655629fa7bbc69d8e"
 uuid = "c7cfdc94-dc32-55de-ac96-5a1b8d977c5b"
-version = "1.15.0+0"
+version = "1.17.0+0"
 
 [[deps.Xorg_libxkbfile_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libX11_jll"]
@@ -1985,9 +2018,9 @@ version = "1.2.13+1"
 
 [[deps.Zstd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "e678132f07ddb5bfa46857f0d7620fb9be675d3b"
+git-tree-sha1 = "555d1076590a6cc2fdee2ef1469451f872d8b41b"
 uuid = "3161d3a3-bdf6-5164-811a-617609db77b4"
-version = "1.5.6+0"
+version = "1.5.6+1"
 
 [[deps.eudev_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "gperf_jll"]
@@ -1997,9 +2030,9 @@ version = "3.2.9+0"
 
 [[deps.fzf_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "a68c9655fbe6dfcab3d972808f1aafec151ce3f8"
+git-tree-sha1 = "936081b536ae4aa65415d869287d43ef3cb576b2"
 uuid = "214eeab7-80f7-51ab-84ad-2988db7cef09"
-version = "0.43.0+0"
+version = "0.53.0+0"
 
 [[deps.gperf_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2008,21 +2041,27 @@ uuid = "1a1c6b14-54f6-533d-8383-74cd7377aa70"
 version = "3.1.1+0"
 
 [[deps.libaom_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "3a2ea60308f0996d26f1e5354e10c24e9ef905d4"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "1827acba325fdcdf1d2647fc8d5301dd9ba43a9d"
 uuid = "a4ae2306-e953-59d6-aa16-d00cac43593b"
-version = "3.4.0+0"
+version = "3.9.0+0"
 
 [[deps.libass_jll]]
-deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "5982a94fcba20f02f42ace44b9894ee2b140fe47"
+deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
+git-tree-sha1 = "e17c115d55c5fbb7e52ebedb427a0dca79d4484e"
 uuid = "0ac62f75-1d6f-5e53-bd7c-93b484bb37c0"
-version = "0.15.1+0"
+version = "0.15.2+0"
 
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.8.0+1"
+version = "5.11.0+0"
+
+[[deps.libdecor_jll]]
+deps = ["Artifacts", "Dbus_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "Pango_jll", "Wayland_jll", "xkbcommon_jll"]
+git-tree-sha1 = "9bf7903af251d2050b467f76bdbe57ce541f7f4f"
+uuid = "1183f4f0-6f2a-5f1a-908b-139f9cdfea6f"
+version = "0.2.2+0"
 
 [[deps.libevdev_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2031,10 +2070,10 @@ uuid = "2db6ffa8-e38f-5e21-84af-90c45d0032cc"
 version = "1.11.0+0"
 
 [[deps.libfdk_aac_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "daacc84a041563f965be61859a36e17c4e4fcd55"
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "8a22cf860a7d27e4f3498a0fe0811a7957badb38"
 uuid = "f638f0a6-7fb0-5443-88ba-1cc74229b280"
-version = "2.0.2+0"
+version = "2.0.3+0"
 
 [[deps.libinput_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "eudev_jll", "libevdev_jll", "mtdev_jll"]
@@ -2044,15 +2083,15 @@ version = "1.18.0+0"
 
 [[deps.libpng_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Zlib_jll"]
-git-tree-sha1 = "d7015d2e18a5fd9a4f47de711837e980519781a4"
+git-tree-sha1 = "b70c870239dc3d7bc094eb2d6be9b73d27bef280"
 uuid = "b53b4c65-9356-5827-b1ea-8c7a1a84506f"
-version = "1.6.43+1"
+version = "1.6.44+0"
 
 [[deps.libvorbis_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Ogg_jll", "Pkg"]
-git-tree-sha1 = "b910cb81ef3fe6e78bf6acee440bda86fd6ae00c"
+git-tree-sha1 = "490376214c4721cdaca654041f635213c6165cb3"
 uuid = "f27f6e37-5d2b-51aa-960f-b287f2bc3b7a"
-version = "1.3.7+1"
+version = "1.3.7+2"
 
 [[deps.mtdev_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2063,7 +2102,13 @@ version = "1.1.6+0"
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
-version = "1.52.0+1"
+version = "1.59.0+0"
+
+[[deps.oneTBB_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "7d0ea0f4895ef2f5cb83645fa689e52cb55cf493"
+uuid = "1317d2d5-d96f-522e-a858-c73665f53c3e"
+version = "2021.12.0+0"
 
 [[deps.p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -2091,11 +2136,13 @@ version = "1.4.1+1"
 
 # ╔═╡ Cell order:
 # ╠═b4423c48-1d43-4887-9f96-a2f6ac8eaa45
+# ╠═b6058fe0-72a9-4be3-9d09-5f35109198a2
 # ╠═5b8f2611-cdf9-4761-8768-4b014f02b842
 # ╟─9e73d94e-c26e-4513-8142-1058738f103b
 # ╟─d1b6461e-6e87-4cab-af2d-f28e09c336ac
-# ╟─9ad716ab-57d8-4b17-b40c-93f6e14903b2
 # ╠═545776f8-e826-430b-8744-05a53ef708b6
+# ╟─a8bff246-a387-43ec-91b9-de97d366c79d
+# ╟─9ad716ab-57d8-4b17-b40c-93f6e14903b2
 # ╠═2206c20c-9e67-49a4-bc26-b203477b872f
 # ╠═a781a4c1-d0b1-4bab-a08b-724697d617f9
 # ╠═a03492f5-c172-46f3-839f-4d7417015acb
@@ -2105,55 +2152,49 @@ version = "1.4.1+1"
 # ╟─771a6712-36a4-4e1c-8355-210e4f3787ec
 # ╠═407c19d9-d67f-4e98-a8e6-8bb26c24e46f
 # ╠═2369b267-cfbc-4092-9822-24582c10af13
-# ╠═4a35f8fa-33d8-481f-8423-d5af7e32dc8f
 # ╠═16f56d88-d9e4-4ad5-9431-3a993408d26d
+# ╠═4a35f8fa-33d8-481f-8423-d5af7e32dc8f
 # ╠═2d0f04ca-fb8d-4dc9-81e6-1f2600fb0fab
 # ╠═79db0e46-1685-4c90-b51c-b158eac11f03
 # ╟─97b56eb0-df22-4877-8320-6440a1806c10
 # ╟─fd85e7bd-b950-4f0b-909c-cbdc85216a61
+# ╠═26beaaa8-923b-4b03-ae6d-af18996eb398
+# ╟─afd8681e-3169-44f1-aece-599ca9998531
 # ╠═a2570d4b-101c-4120-aa6c-8bbf8e42decd
 # ╠═31498e3b-94eb-4fe6-a814-f69fc9e5bb4c
-# ╠═26beaaa8-923b-4b03-ae6d-af18996eb398
-# ╠═55c51a2a-d99b-4e39-b2d5-4d82d8742a78
-# ╠═faf54ef7-7f3b-4f16-a18f-b21c0f00c2c9
-# ╟─f17cf45a-738e-4d23-8bfb-c06990ebd1fe
-# ╟─9782d6f9-285c-46d8-a826-017f4a5bcf53
+# ╠═c07030fd-47e4-4ee7-b409-8591771f61c7
 # ╠═86985c1c-c4a2-4b38-88e5-d1488d903ea8
 # ╠═cce7dba2-2bee-474d-b17a-4d091e4a1fd6
 # ╠═9dbdb70b-758d-49e7-b0b1-74fb339a9a8d
-# ╠═b9c3585a-e4cb-45a0-a864-a1739f4a47ed
+# ╟─23c239f3-4cd2-48fc-9391-41d361460f98
+# ╠═faf54ef7-7f3b-4f16-a18f-b21c0f00c2c9
+# ╟─f17cf45a-738e-4d23-8bfb-c06990ebd1fe
+# ╟─9782d6f9-285c-46d8-a826-017f4a5bcf53
 # ╠═94171cfa-1e8e-4aba-a5b8-faad0104cf80
 # ╠═8a1efef7-8903-426c-b8d6-a99bc5288981
 # ╠═41b7458c-dc6c-4774-8991-f74519a850ed
-# ╠═e7e58aaf-af48-4eac-a875-b64c569e435c
-# ╠═955fa4c1-50a8-4b61-be12-b4adb557ea82
 # ╟─8fbdea3e-2c49-4068-8b2e-6339737554f2
 # ╟─5c76963a-5cd6-4797-bc28-536a565bf4fe
-# ╠═3c96b257-8c18-4e7b-9677-c8a703d5d21f
 # ╠═561faa84-f4e3-4712-92b0-68e6edabae65
 # ╠═0c6a11eb-e4b2-4daa-83c9-97872ca150ce
 # ╠═c8d73641-e8ba-46ff-b368-981d3c288d48
 # ╠═b69942f4-34b8-47f9-b33a-9776719feac0
+# ╠═72f3a029-32f2-4dbd-b8c3-f5794ea85404
 # ╠═319a6376-3172-4f9b-9137-c8a3809920c3
-# ╠═5be3c4c2-dcae-4a57-8bcc-9a6d1f580110
 # ╠═61d7911a-ea4d-4ef1-9778-6a2e8eff10e1
 # ╠═b2fc20f1-faf1-4e08-9ccd-6b175cff0066
-# ╠═7e92160b-51eb-4434-8001-60a00f84d1f2
-# ╠═70890a0e-f7bb-4a92-aa11-2e65e70875b1
-# ╠═a598c1a7-9788-44bb-85ee-24aa4f14d9f9
 # ╠═d132b9c0-8101-4c14-89d7-5fa1462ea71e
-# ╟─f3fce6ec-b9c8-4aae-bdfa-2387bb2cc38a
 # ╠═32f20ec2-bf15-467f-98ef-6dbe6a568bca
 # ╠═825e7090-8196-4165-853c-57237f5e05c9
 # ╠═8f361246-8941-47a6-98c1-2b92dea2c74b
 # ╟─84d96895-e4ad-4bf4-8df7-6e81b983bb3e
 # ╠═cc41548c-674a-4f67-bdf7-95ce16a6a5d8
-# ╠═40e51d70-0e20-48c8-9156-b1475870a604
 # ╠═eb1daded-ad36-41d3-9088-a9f8cf6bf63f
 # ╠═eef3c2ad-3619-49b1-a612-63c234314dfd
 # ╠═aac0a39f-0c49-4009-974e-852c7e8e2b17
 # ╠═38b8e9f0-2546-4113-83b7-85599faa6992
 # ╟─146871c4-e014-4ee4-9933-1d21c2504635
+# ╟─e09da774-b32d-487f-97a9-2195d3306224
 # ╟─e47f1bd9-89b5-4f67-96bf-d6b4a50a721c
 # ╠═309e82f8-2ea4-4de8-a27b-92844948c579
 # ╠═0499ad09-e8a8-41e8-99f3-4ca309ceb9d9
@@ -2182,26 +2223,20 @@ version = "1.4.1+1"
 # ╠═a630247b-0505-43ff-b94a-468ef8887728
 # ╟─1b3e2e57-7c3f-4365-8616-e4b46b046102
 # ╠═93248879-4486-4059-a363-6c7b6a0015d8
-# ╠═251b6304-4314-479e-aa8a-d9e573d29c69
-# ╠═3d552383-bf50-422d-9d8a-e096cdb521c4
-# ╟─949954b4-663d-4ef3-99b5-0df3c74a31e7
 # ╠═46f8977f-fe22-4efc-9724-6b8ca588414d
+# ╟─949954b4-663d-4ef3-99b5-0df3c74a31e7
 # ╟─8fc35997-f124-423e-b384-0f2369ecaa35
 # ╠═84b53076-c26b-445a-a458-fe71cca242dc
 # ╟─16f2dc1f-30d2-4335-87e2-afb32235f1dc
-# ╠═62c83b97-32ed-4c48-987e-bbbd95afbd20
-# ╠═400fa7e6-6090-46fb-9610-ab3c816177c5
+# ╟─400fa7e6-6090-46fb-9610-ab3c816177c5
 # ╠═d33b3243-058c-446f-975a-0aee5b5426ac
-# ╠═08f567b2-769a-498d-9a49-4fb82eae8639
-# ╠═9c452b24-0e8a-4b4e-a408-ea60da97a831
-# ╟─87f1dd44-5127-4c94-b0ef-4aa018029c18
 # ╠═0d3e2f32-19fe-435d-96b6-83f047ecd8ef
 # ╠═cf6f1ff9-6439-4ef9-af20-f278495eb239
-# ╟─e03267b6-1320-435a-818a-c2018556c25b
-# ╟─0f3840e7-0ca5-4d57-ac12-cd4df3c9caf3
 # ╠═847bb094-a2b8-4459-9d7b-f39bd3db2101
+# ╟─e03267b6-1320-435a-818a-c2018556c25b
 # ╠═662b0be2-9f82-4980-83de-bb0143c28736
 # ╠═60b8f0cc-7e28-4787-be5c-e2b779e655c4
 # ╠═1fba26bb-4d17-4df8-8ce2-ca4185101681
+# ╟─13e65ea8-e0c4-45ee-ae57-460310380097
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
