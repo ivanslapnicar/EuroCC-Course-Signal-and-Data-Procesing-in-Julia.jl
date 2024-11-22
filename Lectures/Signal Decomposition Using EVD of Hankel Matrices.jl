@@ -17,9 +17,6 @@ end
 # ╔═╡ b4423c48-1d43-4887-9f96-a2f6ac8eaa45
 using PlutoUI, FFTW, ToeplitzMatrices, SpecialMatrices, Random, LinearAlgebra, WAV, Arpack, LinearMaps, Plots
 
-# ╔═╡ 35b59471-743f-4593-9abd-6de1a38ee4f9
-using DataFrames
-
 # ╔═╡ b6058fe0-72a9-4be3-9d09-5f35109198a2
 plotly()
 
@@ -907,28 +904,70 @@ Nf=[16 33 65 131 262 523 1047 2093 4186;
 	29 58 117 233 466 932 1865 3729 7459;
 	31 62 123 247 494 988 1976 3951 7902]
 
-# ╔═╡ 7570deee-b5a6-49c2-8dd8-59853fa92a61
+# ╔═╡ ae4e5a29-73a8-45d2-81d2-c3c656ddbfef
+Notes=["C", "C♯/D♭", "D", "D♯/E♭", "E", "F", "F♯/G♭", "G", "G♯/A♭", "A", "A♯/B♭", "B"]
+
+# ╔═╡ 283b8d85-d42c-486c-9430-4d0e1111fadb
+Octaves=string.(collect(0:8))
+
+# ╔═╡ a1b27036-352d-4f68-a629-44691120f8e6
+Chord=Vector{Any}(undef,Lₚ);
+
+# ╔═╡ 63a0bb76-0098-4575-bd2c-fddf3a81a466
 begin
-	Df=DataFrame()
-	Df."Notes"=["C", "C♯/D♭", "D", "D♯/E♭", "E", "F", "F♯/G♭", "G", "G♯/A♭", "A", "A♯/B♭", "B"]
-	for i=1:9
-		name="Oct"*string(i-1)
-		Df[!, "$name"] = Nf[:,i]
+	# Compute again the frequencies of all monocomponents
+	Frequency=Vector{Float64}(undef,Lₚ)
+	Amplitude=Vector{Float64}(undef,Lₚ)
+	for i=1:Lₚ
+		# FFT of a mono-component and computed frequency
+		l0=1000
+		fs0=abs.(fft(xcompₚ[i]))
+		Amplitude[i],ind0=findmax(fs0[1:l0])
+		Frequency[i]=ind0*Fp/length(fs0)
 	end
-	Df
 end
 
-# ╔═╡ bdbbd77a-78e7-43f2-bc28-bf0a1839b001
-findfirst(isapprox.(Df[2:end,2:end],259.495,rtol=0.1).==true)
+# ╔═╡ 0b5d7813-d4d8-4e62-9e9a-2dd9eab5adb6
+ [Frequency Amplitude]
 
-# ╔═╡ 6a334da7-8c36-4ff7-9440-1d939dfacb41
-typeof(Df[1:end,2:end])
+# ╔═╡ 5adaf3aa-3256-4076-85fc-e10439d8be63
+sort(Amplitude,rev=true)
+
+# ╔═╡ 08912314-bbf1-404e-bcdc-05623f48b173
+for i=1:Lₚ
+	Cind=findfirst(isapprox.(Nf,Frequency[i],rtol=0.03))
+	Chord[i]=Notes[Cind[1]]*Octaves[Cind[2]]
+end
+
+# ╔═╡ 469b3d33-b616-4e48-998a-d9476263ab74
+[Chord Amplitude]
+
+# ╔═╡ 174995db-f16b-4a6c-867e-744f3b2a265c
+sort(Amplitude,rev=true)
+
+# ╔═╡ 9d8c7bf8-67b0-45e1-98a5-312dbe032081
+begin
+	# Indices of notes with Abig largest amplitudes
+	Abig=10
+	Aind=sortperm(Amplitude,rev=true)[1:Abig]
+end
+
+# ╔═╡ 20ac7f13-df71-415d-ad1b-4df08ff7fb3f
+# Notes with Abig largest amplitudes
+Chord[Aind]
+
+# ╔═╡ 04ae92c1-8609-4fc0-9939-a5963b5ecc59
+unique(Chord[Aind])
+
+# ╔═╡ 3463f0b0-60b0-4d10-810a-c53b07914380
+md"""
+__Nota bene:__ D4 is somewhat unexpected. The frequency (with the largest amplitude) of the 17-th mono-component is 291.5 Hz, close to 294 Hz.
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 Arpack = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
-DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
@@ -941,7 +980,6 @@ WAV = "8149f6b0-98f6-5db9-b78f-408fbbb8ef88"
 
 [compat]
 Arpack = "~0.5.4"
-DataFrames = "~1.7.0"
 FFTW = "~1.8.0"
 LinearMaps = "~3.11.2"
 Plots = "~1.40.3"
@@ -957,7 +995,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.1"
 manifest_format = "2.0"
-project_hash = "cd954b4c45f39c9256561772f079e3f0ff316044"
+project_hash = "60f5ac1832d0de849086c7df37cfd805421a279f"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1080,11 +1118,6 @@ git-tree-sha1 = "439e35b0b36e2e5881738abc8857bd92ad6ff9a8"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.6.3"
 
-[[deps.Crayons]]
-git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
-uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
-version = "4.1.1"
-
 [[deps.DSP]]
 deps = ["Compat", "FFTW", "IterTools", "LinearAlgebra", "Polynomials", "Random", "Reexport", "SpecialFunctions", "Statistics"]
 git-tree-sha1 = "0df00546373af8eee1598fb4b2ba480b1ebe895c"
@@ -1096,22 +1129,11 @@ git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 version = "1.16.0"
 
-[[deps.DataFrames]]
-deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "fb61b4812c49343d7ef0b533ba982c46021938a6"
-uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.7.0"
-
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
 git-tree-sha1 = "1d0a14036acb104d9e89698bd408f63ab58cdc82"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 version = "0.18.20"
-
-[[deps.DataValueInterfaces]]
-git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
-uuid = "e2d170a0-9d28-54be-80f0-106bbe20a464"
-version = "1.0.0"
 
 [[deps.Dates]]
 deps = ["Printf"]
@@ -1242,11 +1264,6 @@ git-tree-sha1 = "1ed150b39aebcc805c26b93a8d0122c940f64ce2"
 uuid = "559328eb-81f9-559d-9380-de523a88c83c"
 version = "1.0.14+0"
 
-[[deps.Future]]
-deps = ["Random"]
-uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
-version = "1.11.0"
-
 [[deps.GLFW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Xorg_libXcursor_jll", "Xorg_libXi_jll", "Xorg_libXinerama_jll", "Xorg_libXrandr_jll", "libdecor_jll", "xkbcommon_jll"]
 git-tree-sha1 = "532f9126ad901533af1d4f5c198867227a7bb077"
@@ -1318,19 +1335,6 @@ git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
 version = "0.2.5"
 
-[[deps.InlineStrings]]
-git-tree-sha1 = "45521d31238e87ee9f9732561bfee12d4eebd52d"
-uuid = "842dd82b-1e85-43dc-bf29-5d0ee9dffc48"
-version = "1.4.2"
-
-    [deps.InlineStrings.extensions]
-    ArrowTypesExt = "ArrowTypes"
-    ParsersExt = "Parsers"
-
-    [deps.InlineStrings.weakdeps]
-    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
-    Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-
 [[deps.IntelOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "LazyArtifacts", "Libdl"]
 git-tree-sha1 = "10bd689145d2c3b2a9844005d01087cc1194e79e"
@@ -1342,11 +1346,6 @@ deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 version = "1.11.0"
 
-[[deps.InvertedIndices]]
-git-tree-sha1 = "0dc7b50b8d436461be01300fd8cd45aa0274b038"
-uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
-version = "1.3.0"
-
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
 uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
@@ -1356,11 +1355,6 @@ version = "0.2.2"
 git-tree-sha1 = "42d5f897009e7ff2cf88db414a389e5ed1bdd023"
 uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 version = "1.10.0"
-
-[[deps.IteratorInterfaceExtensions]]
-git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
-uuid = "82899510-4779-5014-852e-03e436cf321d"
-version = "1.0.0"
 
 [[deps.JLFzf]]
 deps = ["Pipe", "REPL", "Random", "fzf_jll"]
@@ -1758,12 +1752,6 @@ version = "3.2.13"
     MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
     MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
 
-[[deps.PooledArrays]]
-deps = ["DataAPI", "Future"]
-git-tree-sha1 = "36d8b4b899628fb92c2749eb488d884a926614d3"
-uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
-version = "1.4.3"
-
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
 git-tree-sha1 = "5aa36f7049a63a1528fe8f7c3f2113413ffd4e1f"
@@ -1775,12 +1763,6 @@ deps = ["TOML"]
 git-tree-sha1 = "9306f6085165d270f7e3db02af26a400d580f5c6"
 uuid = "21216c6a-2e73-6563-6e65-726566657250"
 version = "1.4.3"
-
-[[deps.PrettyTables]]
-deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "1101cd475833706e4d0e7b122218257178f48f34"
-uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "2.4.0"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -1860,12 +1842,6 @@ git-tree-sha1 = "3bac05bc7e74a75fd9cba4295cde4045d9fe2386"
 uuid = "6c6a2e73-6563-6170-7368-637461726353"
 version = "1.2.1"
 
-[[deps.SentinelArrays]]
-deps = ["Dates", "Random"]
-git-tree-sha1 = "d0553ce4031a081cc42387a9b9c8441b7d99f32d"
-uuid = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
-version = "1.4.7"
-
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 version = "1.11.0"
@@ -1942,12 +1918,6 @@ git-tree-sha1 = "5cf7606d6cef84b543b483848d4ae08ad9832b21"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.34.3"
 
-[[deps.StringManipulation]]
-deps = ["PrecompileTools"]
-git-tree-sha1 = "a6b1675a536c5ad1a60e5a5153e1fee12eb146e3"
-uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
-version = "0.4.0"
-
 [[deps.StyledStrings]]
 uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
 version = "1.11.0"
@@ -1961,18 +1931,6 @@ version = "7.7.0+0"
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 version = "1.0.3"
-
-[[deps.TableTraits]]
-deps = ["IteratorInterfaceExtensions"]
-git-tree-sha1 = "c06b2f539df1c6efa794486abfb6ed2022561a39"
-uuid = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
-version = "1.0.1"
-
-[[deps.Tables]]
-deps = ["DataAPI", "DataValueInterfaces", "IteratorInterfaceExtensions", "OrderedCollections", "TableTraits"]
-git-tree-sha1 = "598cd7c1f68d1e205689b1c2fe65a9f85846f297"
-uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
-version = "1.12.0"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
@@ -2485,10 +2443,19 @@ version = "1.4.1+1"
 # ╠═f8392ada-3896-4ec0-bf43-b99f58ec714a
 # ╠═2171aa3d-e86e-4dfc-a3f2-2800707f78c3
 # ╟─35eb8042-1fbd-4416-85aa-39e569c21148
-# ╠═35b59471-743f-4593-9abd-6de1a38ee4f9
 # ╠═2ced9f0e-a769-4955-97c2-120d08910420
-# ╠═7570deee-b5a6-49c2-8dd8-59853fa92a61
-# ╠═bdbbd77a-78e7-43f2-bc28-bf0a1839b001
-# ╠═6a334da7-8c36-4ff7-9440-1d939dfacb41
+# ╠═ae4e5a29-73a8-45d2-81d2-c3c656ddbfef
+# ╠═283b8d85-d42c-486c-9430-4d0e1111fadb
+# ╠═a1b27036-352d-4f68-a629-44691120f8e6
+# ╠═63a0bb76-0098-4575-bd2c-fddf3a81a466
+# ╠═0b5d7813-d4d8-4e62-9e9a-2dd9eab5adb6
+# ╠═5adaf3aa-3256-4076-85fc-e10439d8be63
+# ╠═08912314-bbf1-404e-bcdc-05623f48b173
+# ╠═469b3d33-b616-4e48-998a-d9476263ab74
+# ╠═174995db-f16b-4a6c-867e-744f3b2a265c
+# ╠═9d8c7bf8-67b0-45e1-98a5-312dbe032081
+# ╠═20ac7f13-df71-415d-ad1b-4df08ff7fb3f
+# ╠═04ae92c1-8609-4fc0-9939-a5963b5ecc59
+# ╟─3463f0b0-60b0-4d10-810a-c53b07914380
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
