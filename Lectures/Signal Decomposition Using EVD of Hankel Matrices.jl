@@ -591,11 +591,10 @@ plot(t,s,title="Note a", legend=false,xlabel="time (s)")
 
 # ╔═╡ 368e2830-3152-40eb-9795-5ea0ec69d8a5
 md"""
-Let us visualize the signal in detail.
-"""
+Let us visualize the signal in detail:
 
-# ╔═╡ 6945a13f-7554-40b9-9e65-75c18ce5ec1a
-@bind k Slider(1:1000:100001-1000,show_value=true)
+k = $(@bind k Slider(1:1000:100001-1000,show_value=true))
+"""
 
 # ╔═╡ 533165d8-3c49-4609-8f69-1237c43b6946
 plot(tₐ[k:k+1000],s[k:k+1000], title="Note A⁴",label=false,xlabel="time (s)")
@@ -2397,7 +2396,6 @@ version = "1.4.1+1"
 # ╠═0e8c82c6-ca02-4684-b319-ce35c2cf19cb
 # ╠═5f3c0dd6-8ec8-432c-a230-786cf3d8a73a
 # ╟─368e2830-3152-40eb-9795-5ea0ec69d8a5
-# ╠═6945a13f-7554-40b9-9e65-75c18ce5ec1a
 # ╠═533165d8-3c49-4609-8f69-1237c43b6946
 # ╠═3873b054-5005-4b17-bae8-a51c44dca506
 # ╠═8d59bb1c-458c-4d51-a735-2587c84e0f2c
