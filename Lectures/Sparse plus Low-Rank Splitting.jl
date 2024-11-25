@@ -269,9 +269,6 @@ end
 # Number of frames
 length(frames)
 
-# ╔═╡ 889fafcf-e435-403a-a238-b1472091cacf
-# playvideo(video)
-
 # ╔═╡ f46ed4a2-1eb9-4f8b-a41e-f211376ac0b1
 frames[1401]
 
@@ -280,7 +277,7 @@ frames[1401]
 clip=frames[1401:1450]
 
 # ╔═╡ 87fc5a91-92d4-4596-81d0-f3293f273268
-@bind t Clock(interval=0.1, max_value=200)
+@bind t Clock(interval=0.1, max_value=50)
 
 # ╔═╡ 2e046722-2532-490b-ad19-f788748f7e8a
 frames[1401+t]
@@ -1700,7 +1697,6 @@ version = "3.5.0+0"
 # ╠═a386f255-4037-4182-8654-f0a340a9f857
 # ╠═2e7417dc-fdd5-4421-ad49-14199974fea8
 # ╠═be406e0b-10a6-4d25-bdc6-e671243e78a8
-# ╠═889fafcf-e435-403a-a238-b1472091cacf
 # ╠═f46ed4a2-1eb9-4f8b-a41e-f211376ac0b1
 # ╠═ff12e43f-1c27-4b66-93e2-67abdadcdcc2
 # ╠═87fc5a91-92d4-4596-81d0-f3293f273268
