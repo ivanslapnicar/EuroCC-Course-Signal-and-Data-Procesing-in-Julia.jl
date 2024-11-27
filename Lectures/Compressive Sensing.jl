@@ -145,12 +145,13 @@ $\delta_k = (k − 1)\mathcal{M}(A)$  for all $k < 1/\mathcal{M}(A)$.
 
 12. Checking whether the specific matrix has RIP is difficult. If $m ≥ C \cdot k \log\left(\displaystyle\frac{n}{k}\right)$, where $C$ is some constant depending on each instance, the following classes of matrices satisfy RIP with $\delta_{2k}<\sqrt{2}-1$ with overwhelming probability (the matrices are normalized to have columns with unit norms):
     
-   1. Form $A$ by sampling at random $n$ column vectors on the unit sphere in $\mathbb{R}^m$.
-   2. Form $A$ by sampling entries from the normal distribution with mean 0 and variance $1/ m$.
-   3. Form $A$ by sampling entries from a symmetric Bernoulli distribution $P(A_{ij} = ±1/\sqrt{m}) = 1/2$.
-   4. Form $A$ by sampling at random $m$ rows of the Fourier matrix.
+    1. Form $A$ by sampling at random $n$ column vectors on the unit sphere in $\mathbb{R}^m$.
+    2. Form $A$ by sampling entries from the normal distribution with mean 0 and variance $1/ m$.
+    3. Form $A$ by sampling entries from a symmetric Bernoulli distribution $P(A_{ij} = ±1/\sqrt{m}) = 1/2$.
+    4. Form $A$ by sampling at random $m$ rows of the Fourier matrix.
 
-10. The __compressive sensing__ interpretation is the following: the signal $x$ is reconstructed from samples with $m$ __functionals__ (the rows of $A$). 
+13. The __compressive sensing__ interpretation is the following: the signal $x$ is reconstructed from samples with $m$ __functionals__ (the rows of $A$).
+14. > The compressive sensing works under conditions much broader than those provided by the best-known results.
 """
 
 # ╔═╡ 2d1d9c68-228e-48e7-88b5-d3f3e439065e
