@@ -364,7 +364,7 @@ end
 
 # ╔═╡ b275c776-47c4-4ed8-ba9d-c4ce1926d540
 # Iterative Hard Thresholding 
-function IHT(A::Matrix, b::Vector,k::Int)
+function IHT(A, b, k )
     # Tolerance
     τ=1e-12
     x=zeros(size(A,2))
@@ -489,9 +489,9 @@ end
 
 # ╔═╡ 49c5d771-f06b-4cdb-982a-057639b3d22e
 begin
-	# Compute the wavelet transform of x or wavelet(WT.db2. db3, batt2, beyl)
-	wlet=wavelet(WT.batt2, WT.Filter, WT.Periodic)
-	xₜ=dwt(xₗ,wlet,2);
+	# Compute the wavelet transform of x or wavelet(WT.db2, sym4, batt2, beyl)
+	wlet=wavelet(WT.db2, WT.Filter, WT.Periodic)
+	xₜ=dwt(xₗ,wlet,2)
 end
 
 # ╔═╡ 668ccf49-ba28-4a6d-ab95-a2a4c876b57f
@@ -591,6 +591,12 @@ end
 
 # ╔═╡ b108e499-5785-4f1a-ac15-098af656c134
 xrecover
+
+# ╔═╡ b64aeff7-84ff-4394-baea-0168a0b21c18
+xsparse
+
+# ╔═╡ 6ec7d730-a1f9-4175-adae-2d5904733515
+imgsparse
 
 # ╔═╡ 12cb3942-6109-42a4-a8d8-aff3c261dff8
 imgrecover=idwt(xrecover, wlet, 2)
@@ -2842,7 +2848,7 @@ version = "1.4.1+1"
 # ╠═b2470310-2356-11eb-249f-a90af0c70a78
 # ╠═bfe752de-2356-11eb-02cc-8197d9ab259f
 # ╠═e336cc06-c019-4613-8b49-e231e0f77726
-# ╠═9b06f8d8-0f8e-4eb3-997f-7fab1ede66bd
+# ╟─9b06f8d8-0f8e-4eb3-997f-7fab1ede66bd
 # ╠═27f33bc4-c6c9-43f1-8b82-df5b4f710ad4
 # ╠═b03d96eb-df52-4c52-bafc-e738f92ef26e
 # ╠═1203652e-ee44-4f7b-af4c-e08d091d1c84
@@ -2850,6 +2856,8 @@ version = "1.4.1+1"
 # ╠═c2ecb04a-f354-4a8e-b85b-83fd59e19d08
 # ╠═452464c2-eb0f-43e2-a833-ffa3c5724fd2
 # ╠═b108e499-5785-4f1a-ac15-098af656c134
+# ╠═b64aeff7-84ff-4394-baea-0168a0b21c18
+# ╠═6ec7d730-a1f9-4175-adae-2d5904733515
 # ╠═12cb3942-6109-42a4-a8d8-aff3c261dff8
 # ╠═eabace10-2357-11eb-204a-d76ba271bd7e
 # ╠═eabe9ea2-2357-11eb-0ea1-c32d6a429aa1
