@@ -725,7 +725,7 @@ plot(Fs/length(fsₐ)*(1:l₁),fsₐ[1:l₁], title="FFT of mono-component $(k�
 
 # ╔═╡ 847bb094-a2b8-4459-9d7b-f39bd3db2101
 # Listen to individual mono-components
-wavplay(xcompₐ[kₐ],Fs)
+wavplay(5*xcompₐ[kₐ],Fs)
 
 # ╔═╡ e03267b6-1320-435a-818a-c2018556c25b
 md"""
@@ -794,7 +794,7 @@ Here we are interested in basic notes and not the overtones, but we keep the thr
 Pat2 = wavread("files/Pathetique_mono_2sec.wav")
 
 # ╔═╡ 5c3bd9b8-128d-4966-9f25-740650ac174a
-wavplay(Pat2[1],Pat2[2])
+wavplay(5*Pat2[1],Pat2[2])
 
 # ╔═╡ cd88c2ef-6754-456d-a06a-7bf525c4cc14
 # Signal and sampling frequency
@@ -805,6 +805,13 @@ length(p)
 
 # ╔═╡ dc48d7b5-65ec-45e4-9611-9a3f589d9463
 p
+
+# ╔═╡ 1449ca3a-5d15-4e96-8ae7-ce2b96df9747
+begin
+	# Plot in time scale
+	tₚ=range(0,stop=length(p)/Fp,length=length(p))
+	plot(tₚ,p,title="C minor chord", legend=false,xlabel="time (s)")
+end
 
 # ╔═╡ 18369292-fa64-4f23-9f47-6d7087f2913f
 begin
@@ -914,7 +921,7 @@ Chord=Vector{Any}(undef,Lₚ);
 
 # ╔═╡ 63a0bb76-0098-4575-bd2c-fddf3a81a466
 begin
-	# Compute again the frequencies of all monocomponents
+	# Compute again the frequencies of all mono-components
 	Frequency=Vector{Float64}(undef,Lₚ)
 	Amplitude=Vector{Float64}(undef,Lₚ)
 	for i=1:Lₚ
@@ -2349,7 +2356,7 @@ version = "1.4.1+1"
 # ╟─afd8681e-3169-44f1-aece-599ca9998531
 # ╠═a2570d4b-101c-4120-aa6c-8bbf8e42decd
 # ╠═31498e3b-94eb-4fe6-a814-f69fc9e5bb4c
-# ╠═c07030fd-47e4-4ee7-b409-8591771f61c7
+# ╟─c07030fd-47e4-4ee7-b409-8591771f61c7
 # ╠═86985c1c-c4a2-4b38-88e5-d1488d903ea8
 # ╠═cce7dba2-2bee-474d-b17a-4d091e4a1fd6
 # ╠═9dbdb70b-758d-49e7-b0b1-74fb339a9a8d
@@ -2427,6 +2434,7 @@ version = "1.4.1+1"
 # ╠═cd88c2ef-6754-456d-a06a-7bf525c4cc14
 # ╠═a205b9df-6dbc-4273-a562-a140114250fc
 # ╠═dc48d7b5-65ec-45e4-9611-9a3f589d9463
+# ╠═1449ca3a-5d15-4e96-8ae7-ce2b96df9747
 # ╠═18369292-fa64-4f23-9f47-6d7087f2913f
 # ╠═564c7262-fe98-444e-a1a4-6d04a39fb013
 # ╠═d67ac882-dfb3-4469-a6f5-bd7562a9030c
