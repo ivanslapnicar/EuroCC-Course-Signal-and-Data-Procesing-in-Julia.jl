@@ -609,6 +609,15 @@ colorview(Gray,imgsparse)
 # ╔═╡ eabe9ea2-2357-11eb-0ea1-c32d6a429aa1
 colorview(Gray,imgrecover)
 
+# ╔═╡ 0ca7627b-a2bd-4972-9587-13c08d1facc8
+md"""
+## Some resources
+
+Additional algorithms and examples are in the package [CompressedSensing.jl](https://github.com/SebastianAment/CompressedSensing.jl).
+
+See also [MRIReco.jl](https://github.com/MagneticResonanceImaging/MRIReco.jl) for examples in magnetic resonance.
+"""
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -2861,5 +2870,6 @@ version = "1.4.1+1"
 # ╠═12cb3942-6109-42a4-a8d8-aff3c261dff8
 # ╠═eabace10-2357-11eb-204a-d76ba271bd7e
 # ╠═eabe9ea2-2357-11eb-0ea1-c32d6a429aa1
+# ╟─0ca7627b-a2bd-4972-9587-13c08d1facc8
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
